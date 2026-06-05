@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import useStore from './store/useStore';
+import { fetchBooksFromDrive } from './services/googleDrive';
+import { fetchBookCover } from './services/googleBooks';
 
 // Pages
 import Library from './pages/Library/Library';
@@ -15,6 +17,31 @@ const AdminRoute = ({ children }) => {
 };
 
 function App() {
+  const books = useStore((state) => state.books);
+  const addBook = useStore((state) => state.addBook);
+  const removeBook = useStore((state) => state.removeBook);
+
+  React.useEffect(() => {
+    const autoSync = async () => {
+      // Auto-sync for new users sharing the link
+      if (books.length === 0) {
+        try {
+          const fetchedBooks = await fetchBooksFromDrive();
+          for (const book of fetchedBooks) {
+            if (!book.hasCustomCover) {
+              const coverUrl = await fetchBookCover(book.title);
+              if (coverUrl) book.coverUrl = coverUrl;
+            }
+            addBook(book);
+          }
+        } catch (err) {
+          console.error("Auto-sync failed:", err);
+        }
+      }
+    };
+    autoSync();
+  }, [books.length]); // Intentionally only relying on length to prevent loops
+
   return (
     <Router>
       <div className="app-container">
