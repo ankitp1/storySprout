@@ -82,7 +82,7 @@ const BookCard = ({ book, progress, readBooks, navigate, isGrid = false }) => (
         </div>
       ) : null}
     </div>
-    <h3 style={{ margin: 0, textAlign: 'center', fontSize: '1.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>{book.title}</h3>
+    <h3 style={{ margin: 0, textAlign: 'center', fontSize: '1.5rem', width: '100%', wordWrap: 'break-word', lineHeight: '1.2' }}>{book.title}</h3>
     
     <style>{`
       div:hover > .play-overlay {
