@@ -149,7 +149,7 @@ export default function Library() {
       // 2. Filters
       if (activeFilter === 'Completed' && !readBooks.includes(book.id)) return false;
       if (activeFilter === 'Favorites' && (ratings[book.id] || 0) < 3) return false;
-      if (activeFilter === 'Series' && !book.seriesName) return false;
+      if (activeFilter === 'Series' && !book.series) return false;
       
       return true;
     })
@@ -166,14 +166,14 @@ export default function Library() {
 
   // Grouping
   const seriesGroups = processedBooks.reduce((acc, book) => {
-    if (book.seriesName) {
-      if (!acc[book.seriesName]) acc[book.seriesName] = [];
-      acc[book.seriesName].push(book);
+    if (book.series) {
+      if (!acc[book.series]) acc[book.series] = [];
+      acc[book.series].push(book);
     }
     return acc;
   }, {});
 
-  const standaloneBooks = processedBooks.filter(b => !b.seriesName);
+  const standaloneBooks = processedBooks.filter(b => !b.series);
   const isFiltering = searchQuery !== '' || activeFilter !== 'All' || sortBy !== 'Title';
 
   return (
