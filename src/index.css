@@ -88,6 +88,7 @@
     --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
     --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+    --btn-text-color: #1A1F36; /* Dark text for neon buttons in dark mode */
   }
 }
 
@@ -102,6 +103,7 @@
   --primary: #FFFF00;
   --secondary: #00FFFF;
   --accent: #FF00FF;
+  --btn-text-color: #000000; /* Dark text for neon buttons */
 }
 
 /* ====================================================================
@@ -192,7 +194,7 @@ button:focus-visible {
 /* Primary Button */
 .btn-primary {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: white;
+  color: var(--btn-text-color, white);
   box-shadow: var(--shadow-md), 0 0 20px rgba(255, 107, 107, 0.3);
   font-size: 1.125rem;
 }
@@ -254,7 +256,7 @@ button:focus-visible {
   height: 72px;
   border-radius: var(--radius-full);
   background: linear-gradient(135deg, var(--primary), var(--accent));
-  color: white;
+  color: var(--btn-text-color, white);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -497,17 +499,17 @@ button:focus-visible {
 
 .badge-primary {
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white;
+  color: var(--btn-text-color, white);
 }
 
 .badge-success {
   background: linear-gradient(135deg, var(--success), #00a883);
-  color: white;
+  color: var(--btn-text-color, white);
 }
 
 .badge-warning {
   background: linear-gradient(135deg, var(--warning), #ffa502);
-  color: var(--text-main);
+  color: #2D3436; /* Always dark text for warning yellow */
 }
 
 /* ====================================================================
