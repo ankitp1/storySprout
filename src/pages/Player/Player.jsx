@@ -222,7 +222,7 @@ export default function Player() {
 
       <audio 
         ref={audioRef} 
-        src={currentChapter?.url ? (currentChapter.url.includes('acknowledgeAbuse') ? currentChapter.url : `${currentChapter.url}&acknowledgeAbuse=true`) : undefined} 
+        src={currentChapter?.id ? `https://drive.google.com/uc?export=download&id=${currentChapter.id}&confirm=t` : undefined} 
         onTimeUpdate={handleTimeUpdate} 
         onEnded={() => {
           // Award points for finishing a chapter!
