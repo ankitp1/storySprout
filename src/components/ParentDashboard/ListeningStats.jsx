@@ -69,7 +69,7 @@ export default function ListeningStats({ profileId }) {
                 
                 {hasQuestions ? (
                   <div style={{ textAlign: 'right' }}>
-                    <span style={{ display: 'inline-block', background: 'var(--primary)', color: 'white', padding: '0.25rem 0.5rem', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                    <span style={{ display: 'inline-block', background: 'var(--primary)', color: 'var(--btn-text-color, white)', padding: '0.25rem 0.5rem', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold' }}>
                       Questions Available
                     </span>
                   </div>

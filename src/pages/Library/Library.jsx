@@ -76,7 +76,7 @@ const BookCard = ({ book, progress, readBooks, onBookClick, isGrid = false, rati
       >
         <div style={{
           width: '64px', height: '64px', borderRadius: '50%',
-          background: 'var(--primary)', color: 'white',
+          background: 'var(--primary)', color: 'var(--btn-text-color, white)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 4px 15px rgba(255, 107, 107, 0.5)'
         }}>
@@ -96,7 +96,7 @@ const BookCard = ({ book, progress, readBooks, onBookClick, isGrid = false, rati
       ) : progress[book.id] && progress[book.id].currentTime > 0 ? (
         <div style={{
           position: 'absolute', top: '10px', right: '10px',
-          background: 'var(--primary)', color: 'white', padding: '4px 12px',
+          background: 'var(--primary)', color: 'var(--btn-text-color, white)', padding: '4px 12px',
           borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold',
           boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
         }}>
@@ -250,7 +250,7 @@ export default function Library() {
               onClick={() => setIsShopOpen(true)}
               style={{
                 background: 'var(--primary)',
-                color: 'white',
+                color: 'var(--btn-text-color, white)',
                 border: 'none',
                 padding: '0.5rem 1rem',
                 borderRadius: '24px',
@@ -275,7 +275,7 @@ export default function Library() {
             title="Toggle High Contrast Mode"
             style={{ 
               background: isHighContrast ? 'var(--primary)' : 'white',
-              color: isHighContrast ? 'white' : 'var(--text-main)'
+              color: isHighContrast ? 'var(--btn-text-color, white)' : 'var(--text-main)'
             }}
           >
             <Eye size={24} />
@@ -354,7 +354,7 @@ export default function Library() {
                 borderRadius: '24px',
                 border: 'none',
                 background: activeFilter === filter ? 'var(--primary)' : 'var(--surface-color)',
-                color: activeFilter === filter ? 'white' : 'var(--text-main)',
+                color: activeFilter === filter ? 'var(--btn-text-color, white)' : 'var(--text-main)',
                 fontSize: '1rem',
                 fontWeight: 'bold',
                 cursor: 'pointer',

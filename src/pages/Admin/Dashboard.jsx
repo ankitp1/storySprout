@@ -101,7 +101,7 @@ export default function Dashboard() {
         <div style={{ 
           padding: '1rem', 
           background: 'var(--primary)', 
-          color: 'white', 
+          color: 'var(--btn-text-color, white)', 
           borderRadius: '12px',
           marginBottom: '2rem',
           textAlign: 'center'

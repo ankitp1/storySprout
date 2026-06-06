@@ -201,7 +201,7 @@ export default function Player() {
         {toastMsg && (
           <div style={{
             position: 'absolute', top: '10%',
-            background: 'var(--primary)', color: 'white', padding: '0.75rem 1.5rem',
+            background: 'var(--primary)', color: 'var(--btn-text-color, white)', padding: '0.75rem 1.5rem',
             borderRadius: '24px', fontSize: '1.5rem', fontWeight: 'bold',
             boxShadow: '0 10px 20px rgba(255, 107, 107, 0.3)',
             animation: 'slideUpFade 3s ease-out forwards',
