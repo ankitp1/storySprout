@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import { Play, Settings } from 'lucide-react';
+import { Play, Settings, Users } from 'lucide-react';
 
 const BookCard = ({ book, progress, readBooks, navigate, isGrid = false }) => (
   <div 
@@ -94,9 +94,22 @@ const BookCard = ({ book, progress, readBooks, navigate, isGrid = false }) => (
 
 export default function Library() {
   const books = useStore(state => state.books);
-  const progress = useStore(state => state.progress);
-  const readBooks = useStore(state => state.readBooks);
+  const activeProfileId = useStore(state => state.activeProfileId);
+  const profiles = useStore(state => state.profiles);
+  const progress = useStore(state => state.progress[state.activeProfileId] || {});
+  const readBooks = useStore(state => state.readBooks[state.activeProfileId] || []);
   const navigate = useNavigate();
+  
+  const activeProfile = profiles.find(p => p.id === activeProfileId);
+
+  const handleAdminClick = () => {
+    navigate('/admin/login');
+  };
+
+  const handleSwitchProfile = () => {
+    useStore.getState().setActiveProfile(null);
+    navigate('/profiles');
+  };
 
   // Group books by series
   const seriesGroups = {};
@@ -115,17 +128,31 @@ export default function Library() {
     <div style={{ padding: '2rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
-        <h1 style={{ fontSize: '3rem', color: 'var(--primary)', textShadow: '2px 2px 0px rgba(0,0,0,0.1)' }}>
-          StorySprout 🌱
-        </h1>
+        <div>
+          <h1 style={{ fontSize: '3rem', color: 'var(--primary)', textShadow: '2px 2px 0px rgba(0,0,0,0.1)', margin: 0 }}>
+            {activeProfile ? `${activeProfile.name}'s Library` : 'StorySprout 🌱'}
+          </h1>
+        </div>
         
-        {/* Hidden Admin Button */}
-        <button 
-          onClick={() => navigate('/admin/login')}
-          style={{ color: 'var(--text-muted)', opacity: 0.5, padding: '1rem' }}
-        >
-          <Settings size={24} />
-        </button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          {/* Switch Profile Button */}
+          <button 
+            onClick={handleSwitchProfile}
+            style={{ color: 'var(--text-muted)', opacity: 0.5, padding: '1rem', background: 'none', border: 'none', cursor: 'pointer' }}
+            title="Switch Profile"
+          >
+            <Users size={24} />
+          </button>
+          
+          {/* Admin Button */}
+          <button 
+            onClick={handleAdminClick}
+            style={{ color: 'var(--text-muted)', opacity: 0.5, padding: '1rem', background: 'none', border: 'none', cursor: 'pointer' }}
+            title="Admin"
+          >
+            <Settings size={24} />
+          </button>
+        </div>
       </div>
 
       {books.length === 0 ? (

@@ -2,8 +2,8 @@ import React from 'react';
 import useStore from '../../store/useStore';
 import { getQuestionsForBook } from '../../lib/discussionQuestions';
 
-export default function ListeningStats() {
-  const listeningStats = useStore(state => state.listeningStats);
+export default function ListeningStats({ profileId }) {
+  const listeningStats = useStore(state => state.listeningStats[profileId] || {});
   const books = useStore(state => state.books);
   const discussionQuestions = useStore(state => state.discussionQuestions);
 

@@ -9,7 +9,10 @@ export default function Player() {
   const navigate = useNavigate();
   
   const book = useStore(state => state.books.find(b => b.id === bookId));
-  const progress = useStore(state => state.progress[bookId]) || { chapterIndex: 0, currentTime: 0 };
+  const progress = useStore(state => {
+    if (!state.activeProfileId || !state.progress[state.activeProfileId]) return { chapterIndex: 0, currentTime: 0 };
+    return state.progress[state.activeProfileId][bookId] || { chapterIndex: 0, currentTime: 0 };
+  });
   const updateProgress = useStore(state => state.updateProgress);
   const markBookAsRead = useStore(state => state.markBookAsRead);
   const updateListeningStats = useStore(state => state.updateListeningStats);

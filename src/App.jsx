@@ -12,11 +12,18 @@ import Player from './pages/Player/Player';
 import AdminLogin from './pages/Admin/Login';
 import BookCelebration from './pages/BookCelebration/BookCelebration';
 import AdminDashboard from './pages/Admin/Dashboard';
+import ProfileSelection from './pages/ProfileSelection/ProfileSelection';
 
 // Protected Route Component for Admin
-const AdminRoute = ({ children }) => {
+const ProtectedAdminRoute = ({ children }) => {
   const isAdmin = useStore((state) => state.isAdmin);
-  return isAdmin ? children : <Navigate to="/admin/login" />;
+  return isAdmin ? children : <Navigate to="/admin/login" replace />;
+};
+
+// Protected Route Component for Profile
+const ProtectedProfileRoute = ({ children }) => {
+  const activeProfileId = useStore((state) => state.activeProfileId);
+  return activeProfileId ? children : <Navigate to="/profiles" replace />;
 };
 
 function App() {
@@ -69,19 +76,21 @@ function App() {
     <Router>
       <div className="app-container">
         <Routes>
+          <Route path="/profiles" element={<ProfileSelection />} />
+          
           {/* Kid Mode */}
-          <Route path="/" element={<Library />} />
-          <Route path="/read/:bookId" element={<Player />} />
-          <Route path="/book-celebration/:bookId" element={<BookCelebration />} />
+          <Route path="/" element={<ProtectedProfileRoute><Library /></ProtectedProfileRoute>} />
+          <Route path="/read/:bookId" element={<ProtectedProfileRoute><Player /></ProtectedProfileRoute>} />
+          <Route path="/book-celebration/:bookId" element={<ProtectedProfileRoute><BookCelebration /></ProtectedProfileRoute>} />
           
           {/* Admin Mode */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route 
             path="/admin" 
             element={
-              <AdminRoute>
+              <ProtectedAdminRoute>
                 <AdminDashboard />
-              </AdminRoute>
+              </ProtectedAdminRoute>
             } 
           />
         </Routes>

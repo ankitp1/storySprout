@@ -1,8 +1,8 @@
 import React from 'react';
 import useStore from '../../store/useStore';
 
-export default function DashboardOverview() {
-  const listeningStats = useStore(state => state.listeningStats);
+export default function DashboardOverview({ profileId }) {
+  const listeningStats = useStore(state => state.listeningStats[profileId] || {});
   const books = useStore(state => state.books);
 
   const stats = Object.values(listeningStats);

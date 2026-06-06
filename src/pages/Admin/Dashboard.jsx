@@ -10,11 +10,12 @@ import DashboardOverview from '../../components/ParentDashboard/DashboardOvervie
 import ListeningStats from '../../components/ParentDashboard/ListeningStats';
 
 export default function Dashboard() {
-  const { books, addBook, removeBook, setAdminStatus } = useStore();
+  const { books, addBook, removeBook, setAdminStatus, profiles, activeProfileId } = useStore();
   const navigate = useNavigate();
   const [isSyncing, setIsSyncing] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [selectedProfileId, setSelectedProfileId] = useState(activeProfileId || (profiles[0]?.id || null));
 
   if (!isAuthenticated) {
     return <PINEntry onSuccess={() => setIsAuthenticated(true)} />;
@@ -92,10 +93,34 @@ export default function Dashboard() {
         </div>
       )}
 
-      <DashboardOverview />
+      {profiles.length > 0 && (
+        <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <h3 style={{ margin: 0 }}>Viewing Stats For:</h3>
+          <select 
+            value={selectedProfileId} 
+            onChange={(e) => setSelectedProfileId(e.target.value)}
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: '8px',
+              border: '2px solid var(--border)',
+              background: 'var(--surface-color)',
+              color: 'var(--text-main)',
+              fontSize: '1rem',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            {profiles.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <DashboardOverview profileId={selectedProfileId} />
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
-        <ListeningStats />
+        <ListeningStats profileId={selectedProfileId} />
 
         <div style={{ background: 'var(--surface-color)', borderRadius: '16px', padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
