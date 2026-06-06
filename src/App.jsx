@@ -9,16 +9,11 @@ import { loadDiscussionQuestions } from './lib/discussionQuestions';
 // Pages
 import Library from './pages/Library/Library';
 import Player from './pages/Player/Player';
-import AdminLogin from './pages/Admin/Login';
 import BookCelebration from './pages/BookCelebration/BookCelebration';
 import AdminDashboard from './pages/Admin/Dashboard';
 import ProfileSelection from './pages/ProfileSelection/ProfileSelection';
 
-// Protected Route Component for Admin
-const ProtectedAdminRoute = ({ children }) => {
-  const isAdmin = useStore((state) => state.isAdmin);
-  return isAdmin ? children : <Navigate to="/admin/login" replace />;
-};
+
 
 // Protected Route Component for Profile
 const ProtectedProfileRoute = ({ children }) => {
@@ -93,15 +88,7 @@ function App() {
           <Route path="/book-celebration/:bookId" element={<ProtectedProfileRoute><BookCelebration /></ProtectedProfileRoute>} />
           
           {/* Admin Mode */}
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route 
-            path="/admin" 
-            element={
-              <ProtectedAdminRoute>
-                <AdminDashboard />
-              </ProtectedAdminRoute>
-            } 
-          />
+          <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </div>
     </Router>

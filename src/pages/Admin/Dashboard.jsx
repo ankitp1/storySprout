@@ -10,19 +10,19 @@ import DashboardOverview from '../../components/ParentDashboard/DashboardOvervie
 import ListeningStats from '../../components/ParentDashboard/ListeningStats';
 
 export default function Dashboard() {
-  const { books, addBook, removeBook, setAdminStatus, profiles, activeProfileId } = useStore();
+  const { books, addBook, removeBook, isAdmin, setAdminStatus, profiles, activeProfileId } = useStore();
   const navigate = useNavigate();
   const [isSyncing, setIsSyncing] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState(activeProfileId || (profiles[0]?.id || null));
   
   // Book Insights State
   const [selectedBookInfo, setSelectedBookInfo] = useState(null);
   const [isFetchingInfo, setIsFetchingInfo] = useState(false);
 
-  if (!isAuthenticated) {
-    return <PINEntry onSuccess={() => setIsAuthenticated(true)} />;
+  // Use the global isAdmin state, and if not admin, use PINEntry to set it
+  if (!isAdmin) {
+    return <PINEntry onSuccess={() => setAdminStatus(true)} />;
   }
 
   const syncLibrary = async () => {
@@ -87,7 +87,7 @@ export default function Dashboard() {
           <button 
             className="btn-icon" 
             onClick={() => {
-              setIsAuthenticated(false);
+              setAdminStatus(false);
               navigate('/');
             }} 
             title="Logout"
@@ -149,7 +149,16 @@ export default function Dashboard() {
             ) : (
               books.map(book => (
                 <div key={book.id} style={{ display: 'flex', alignItems: 'center', padding: '1rem', borderRadius: 'var(--radius-md)', gap: '1rem', border: '1px solid var(--border)' }}>
-                  <img src={book.coverUrl} alt={book.title} style={{ width: '60px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />
+                  <img 
+                    src={book.coverUrl} 
+                    alt={book.title} 
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = `https://placehold.co/60x80/e2e8f0/475569?text=Cover`;
+                    }}
+                    style={{ width: '60px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} 
+                  />
                   <div style={{ flex: 1 }}>
                     <h4 style={{ margin: 0 }}>{book.title}</h4>
                     {book.series && (
@@ -215,7 +224,16 @@ export default function Dashboard() {
             </button>
             
             <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', alignItems: 'flex-start' }}>
-              <img src={selectedBookInfo.coverUrl} alt="Cover" style={{ width: '80px', borderRadius: '8px' }} />
+              <img 
+                src={selectedBookInfo.coverUrl} 
+                alt="Cover" 
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = `https://placehold.co/80x120/e2e8f0/475569?text=Cover`;
+                }}
+                style={{ width: '80px', borderRadius: '8px' }} 
+              />
               <div>
                 <h2 style={{ margin: '0 0 0.5rem 0' }}>{selectedBookInfo.title}</h2>
                 <p style={{ margin: 0, color: 'var(--text-muted)' }}>{selectedBookInfo.author}</p>

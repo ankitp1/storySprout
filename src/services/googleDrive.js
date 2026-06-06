@@ -22,7 +22,7 @@ const fetchFolderContents = async (folderId, apiKey) => {
 };
 
 const buildBookObj = (folderItem, contents, apiKey, seriesName) => {
-  let coverUrl = 'https://via.placeholder.com/400x600?text=' + encodeURIComponent(folderItem.name);
+  let coverUrl = 'https://placehold.co/400x600/e2e8f0/475569?text=' + encodeURIComponent(folderItem.name);
   let hasCustomCover = false;
   
   if (contents.imageFiles.length > 0) {

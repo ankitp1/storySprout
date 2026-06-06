@@ -42,7 +42,12 @@ export default function ListeningStats({ profileId }) {
                 <img 
                   src={book.coverUrl} 
                   alt={book.title} 
-                  style={{ width: '60px', height: '90px', objectFit: 'cover', borderRadius: '8px' }} 
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = `https://placehold.co/40x60/e2e8f0/475569?text=Cover`;
+                  }}
+                  style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} 
                 />
                 
                 <div style={{ flex: 1 }}>

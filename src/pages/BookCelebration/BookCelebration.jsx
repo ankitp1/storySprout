@@ -68,8 +68,13 @@ export default function BookCelebration() {
         
         <img 
           src={book.coverUrl} 
-          alt={book.title}
-          className="celebration-cover"
+          alt={book.title} 
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = `https://placehold.co/200x300/e2e8f0/475569?text=${encodeURIComponent(book.title)}`;
+          }}
+          style={{ width: '200px', height: '300px', objectFit: 'cover', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', marginBottom: '2rem' }} 
         />
 
         {/* Star Rating Widget */}
