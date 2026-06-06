@@ -213,10 +213,9 @@ export default function Player() {
         <img 
           src={book.coverUrl} 
           alt={book.title} 
-          referrerPolicy="no-referrer"
           onError={(e) => {
             e.target.onerror = null;
-            e.target.src = `https://placehold.co/300x400/e2e8f0/475569?text=${encodeURIComponent(book.title)}`;
+            e.target.src = `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}`;
           }}
           style={{ width: '300px', height: '400px', objectFit: 'cover', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', marginBottom: '2rem' }} 
         />

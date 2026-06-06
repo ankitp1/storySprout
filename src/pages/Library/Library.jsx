@@ -54,7 +54,6 @@ const BookCard = ({ book, progress, readBooks, onBookClick, isGrid = false, rati
       <img 
         src={book.coverUrl} 
         alt={book.title} 
-        referrerPolicy="no-referrer"
         onError={(e) => {
           e.target.onerror = null;
           e.target.src = `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}`;

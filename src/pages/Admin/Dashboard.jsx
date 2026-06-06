@@ -162,7 +162,6 @@ export default function Dashboard() {
                   <img 
                     src={book.coverUrl} 
                     alt={book.title} 
-                    referrerPolicy="no-referrer"
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.src = `https://placehold.co/60x80/e2e8f0/475569?text=Cover`;
@@ -237,7 +236,6 @@ export default function Dashboard() {
               <img 
                 src={selectedBookInfo.coverUrl} 
                 alt="Cover" 
-                referrerPolicy="no-referrer"
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = `https://placehold.co/80x120/e2e8f0/475569?text=Cover`;
