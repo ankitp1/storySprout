@@ -220,22 +220,27 @@ export default function Player() {
         <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>{currentChapter?.name || `Chapter ${chapterIndex + 1}`}</p>
       </div>
 
-      <audio ref={audioRef} src={currentChapter?.url} onTimeUpdate={handleTimeUpdate} onEnded={() => {
-        // Award points for finishing a chapter!
-        addPoints(10);
-        setToastMsg('+10 Points! 🌱');
-        setTimeout(() => setToastMsg(''), 3000);
+      <audio 
+        ref={audioRef} 
+        src={currentChapter?.url ? (currentChapter.url.includes('acknowledgeAbuse') ? currentChapter.url : `${currentChapter.url}&acknowledgeAbuse=true`) : undefined} 
+        onTimeUpdate={handleTimeUpdate} 
+        onEnded={() => {
+          // Award points for finishing a chapter!
+          addPoints(10);
+          setToastMsg('+10 Points! 🌱');
+          setTimeout(() => setToastMsg(''), 3000);
 
-        if (chapterIndex < chapters.length - 1) {
-          nextChapter();
-        } else {
-          // Bonus points for finishing the book!
-          addPoints(50);
-          setIsPlaying(false);
-          markBookAsRead(bookId);
-          navigate(`/book-celebration/${bookId}`);
-        }
-      }} />
+          if (chapterIndex < chapters.length - 1) {
+            nextChapter();
+          } else {
+            // Bonus points for finishing the book!
+            addPoints(50);
+            setIsPlaying(false);
+            markBookAsRead(bookId);
+            navigate(`/book-celebration/${bookId}`);
+          }
+        }} 
+      />
 
       <div style={{ background: 'var(--surface-color)', padding: '2rem 3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', boxShadow: '0 -10px 40px rgba(0,0,0,0.05)', borderTopLeftRadius: '40px', borderTopRightRadius: '40px', zIndex: 10 }}>
         
