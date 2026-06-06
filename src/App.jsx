@@ -28,6 +28,15 @@ const ProtectedProfileRoute = ({ children }) => {
 
 function App() {
   const { books, addBook, setDiscussionQuestions } = useStore();
+  const isHighContrast = useStore(state => state.isHighContrast);
+
+  React.useEffect(() => {
+    if (isHighContrast) {
+      document.body.classList.add('high-contrast');
+    } else {
+      document.body.classList.remove('high-contrast');
+    }
+  }, [isHighContrast]);
 
   React.useEffect(() => {
     const initData = async () => {

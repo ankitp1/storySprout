@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import { Play, Settings, Users } from 'lucide-react';
+import { Play, Settings, Users, Eye, Search, Filter } from 'lucide-react';
 const formatTime = (timeInSeconds) => {
   if (!timeInSeconds) return '0:00';
   const m = Math.floor(timeInSeconds / 60);
@@ -117,9 +117,17 @@ export default function Library() {
   const progress = useStore(state => state.progress[state.activeProfileId] || {});
   const readBooks = useStore(state => state.readBooks[state.activeProfileId] || []);
   const ratings = useStore(state => state.ratings?.[state.activeProfileId] || {});
+  const listeningStats = useStore(state => state.listeningStats[state.activeProfileId] || {});
+  const isHighContrast = useStore(state => state.isHighContrast);
+  const toggleHighContrast = useStore(state => state.toggleHighContrast);
   const navigate = useNavigate();
   
   const activeProfile = profiles.find(p => p.id === activeProfileId);
+
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('All'); // 'All', 'Completed', 'Favorites', 'Series'
+  const [sortBy, setSortBy] = useState('Title'); // 'Title', 'Last Played'
 
   const handleAdminClick = () => {
     navigate('/admin/login');
@@ -130,18 +138,43 @@ export default function Library() {
     navigate('/profiles');
   };
 
-  // Group books by series
-  const seriesGroups = {};
-  const standaloneBooks = [];
+  // Filter & Sort Logic
+  const processedBooks = books
+    .filter(book => {
+      // 1. Search Query
+      if (searchQuery && !book.title.toLowerCase().includes(searchQuery.toLowerCase()) && !book.author?.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      
+      // 2. Filters
+      if (activeFilter === 'Completed' && !readBooks.includes(book.id)) return false;
+      if (activeFilter === 'Favorites' && (ratings[book.id] || 0) < 3) return false;
+      if (activeFilter === 'Series' && !book.seriesName) return false;
+      
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'Title') {
+        return a.title.localeCompare(b.title);
+      } else if (sortBy === 'Last Played') {
+        const timeA = listeningStats[a.id]?.lastListenedAt ? new Date(listeningStats[a.id].lastListenedAt).getTime() : 0;
+        const timeB = listeningStats[b.id]?.lastListenedAt ? new Date(listeningStats[b.id].lastListenedAt).getTime() : 0;
+        return timeB - timeA; // Descending
+      }
+      return 0;
+    });
 
-  books.forEach(book => {
-    if (book.series) {
-      if (!seriesGroups[book.series]) seriesGroups[book.series] = [];
-      seriesGroups[book.series].push(book);
-    } else {
-      standaloneBooks.push(book);
+  // Grouping
+  const seriesGroups = processedBooks.reduce((acc, book) => {
+    if (book.seriesName) {
+      if (!acc[book.seriesName]) acc[book.seriesName] = [];
+      acc[book.seriesName].push(book);
     }
-  });
+    return acc;
+  }, {});
+
+  const standaloneBooks = processedBooks.filter(b => !b.seriesName);
+  const isFiltering = searchQuery !== '' || activeFilter !== 'All' || sortBy !== 'Title';
 
   return (
     <div style={{ padding: '2rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -154,6 +187,19 @@ export default function Library() {
         </div>
         
         <div style={{ display: 'flex', gap: '1rem' }}>
+          {/* High Contrast Button */}
+          <button 
+            className="btn-icon" 
+            onClick={toggleHighContrast}
+            title="Toggle High Contrast Mode"
+            style={{ 
+              background: isHighContrast ? 'var(--primary)' : 'white',
+              color: isHighContrast ? 'white' : 'var(--text-main)'
+            }}
+          >
+            <Eye size={24} />
+          </button>
+          
           {/* Switch Profile Button */}
           <button 
             onClick={handleSwitchProfile}
@@ -174,51 +220,141 @@ export default function Library() {
         </div>
       </div>
 
+      {/* Discovery & Filters Toolbar */}
+      <div style={{ marginBottom: '3rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        
+        {/* Search & Sort Row */}
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '250px' }}>
+            <Search size={24} color="var(--text-muted)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+            <input 
+              type="text" 
+              placeholder="Search books or authors..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '1rem 1rem 1rem 3.5rem',
+                borderRadius: '16px',
+                border: '2px solid var(--border)',
+                fontSize: '1.1rem',
+                background: 'var(--surface-color)',
+                color: 'var(--text-main)'
+              }}
+            />
+          </div>
+          
+          <select 
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{
+              padding: '1rem',
+              borderRadius: '16px',
+              border: '2px solid var(--border)',
+              fontSize: '1.1rem',
+              background: 'var(--surface-color)',
+              color: 'var(--text-main)',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="Title">Sort A-Z</option>
+            <option value="Last Played">Last Played</option>
+          </select>
+        </div>
+
+        {/* Filter Pills Row */}
+        <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+          {['All', 'Completed', 'Favorites', 'Series'].map(filter => (
+            <button
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              style={{
+                padding: '0.75rem 1.5rem',
+                borderRadius: '24px',
+                border: 'none',
+                background: activeFilter === filter ? 'var(--primary)' : 'var(--surface-color)',
+                color: activeFilter === filter ? 'white' : 'var(--text-main)',
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'background 0.2s',
+                boxShadow: activeFilter === filter ? 'var(--shadow-sm)' : 'none'
+              }}
+            >
+              {filter === 'Favorites' && '⭐ '}
+              {filter}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {books.length === 0 ? (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <img src="https://illustrations.popsy.co/amber/reading.svg" alt="Reading" style={{ width: '300px', opacity: 0.5 }} />
           <h2 style={{ color: 'var(--text-muted)', marginTop: '2rem' }}>No books yet! Ask a parent to add some.</h2>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '3.5rem', paddingBottom: '2rem' }}>
+        <div style={{ paddingBottom: '4rem' }}>
           
-          {/* Render each Series Row */}
-          {Object.entries(seriesGroups).map(([seriesName, seriesBooks]) => (
-            <div key={seriesName}>
-              <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem', borderBottom: '4px solid var(--primary)', display: 'inline-block', paddingBottom: '0.25rem', borderRadius: '2px' }}>
-                {seriesName}
-              </h2>
-              <div style={{
-                display: 'flex', gap: '2.5rem', overflowX: 'auto', paddingBottom: '1.5rem',
-                scrollSnapType: 'x mandatory', padding: '10px 10px 30px 10px', marginLeft: '-10px'
-              }}>
-                {seriesBooks.map(book => (
-                  <div key={book.id} style={{ scrollSnapAlign: 'start' }}>
-                    <BookCard book={book} progress={progress} readBooks={readBooks} ratings={ratings} navigate={navigate} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          {/* Render Standalone Books */}
-          {standaloneBooks.length > 0 && (
+          {/* If filtering/searching, show flat grid */}
+          {isFiltering ? (
             <div>
-              {Object.keys(seriesGroups).length > 0 && (
-                <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem', borderBottom: '4px solid var(--primary)', display: 'inline-block', paddingBottom: '0.25rem', borderRadius: '2px' }}>
-                  Individual Books
-                </h2>
+              <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem', color: 'var(--text-main)' }}>
+                Results ({processedBooks.length})
+              </h2>
+              {processedBooks.length === 0 ? (
+                <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem' }}>No books found.</p>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                  gap: '2.5rem'
+                }}>
+                  {processedBooks.map(book => (
+                    <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} ratings={ratings} navigate={navigate} isGrid={true} />
+                  ))}
+                </div>
               )}
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
-                gap: '2.5rem'
-              }}>
-                {standaloneBooks.map(book => (
-                  <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} ratings={ratings} navigate={navigate} isGrid={true} />
-                ))}
-              </div>
             </div>
+          ) : (
+            /* Normal grouped view */
+            <>
+              {Object.entries(seriesGroups).map(([seriesName, seriesBooks]) => (
+                <div key={seriesName} style={{ marginBottom: '3rem' }}>
+                  <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem', color: 'var(--text-main)' }}>{seriesName}</h2>
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '2rem', 
+                    overflowX: 'auto', 
+                    paddingBottom: '2rem',
+                    paddingTop: '1rem',
+                    scrollSnapType: 'x mandatory'
+                  }}>
+                    {seriesBooks.map(book => (
+                      <div key={book.id} style={{ scrollSnapAlign: 'start' }}>
+                        <BookCard book={book} progress={progress} readBooks={readBooks} ratings={ratings} navigate={navigate} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {standaloneBooks.length > 0 && (
+                <div>
+                  <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem', color: 'var(--text-main)' }}>More Books</h2>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: '2.5rem'
+                  }}>
+                    {standaloneBooks.map(book => (
+                      <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} ratings={ratings} navigate={navigate} isGrid={true} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
         </div>

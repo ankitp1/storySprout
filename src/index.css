@@ -14,8 +14,27 @@
   
   --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.12);
-  
+  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.high-contrast {
+  --bg-color: #000000;
+  --surface-color: #111111;
+  --primary: #FFFF00; /* Yellow for high visibility */
+  --secondary: #00FFFF;
+  --text-main: #FFFFFF;
+  --text-muted: #CCCCCC;
+  --border: #444444;
+}
+
+/* Keyboard Navigation Outlines */
+*:focus-visible {
+  outline: 4px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+body {
   --radius-sm: 12px;
   --radius-md: 24px;
   --radius-lg: 36px;

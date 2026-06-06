@@ -144,6 +144,9 @@ const useStore = create(
 
       discussionQuestions: [],
       setDiscussionQuestions: (questions) => set({ discussionQuestions: questions }),
+
+      isHighContrast: false,
+      toggleHighContrast: () => set((state) => ({ isHighContrast: !state.isHighContrast })),
     }),
     {
       name: 'rowans-library-storage', // name of the item in the storage (must be unique)

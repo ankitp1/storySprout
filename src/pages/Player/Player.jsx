@@ -153,6 +153,33 @@ export default function Player() {
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Don't intercept if they are typing in an input (not applicable here, but good practice)
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      switch(e.code) {
+        case 'Space':
+          e.preventDefault();
+          togglePlay();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          nextChapter();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          prevChapter();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [togglePlay, nextChapter, prevChapter]);
+
   const formatTime = (timeInSeconds) => {
     if (isNaN(timeInSeconds)) return "0:00";
     const minutes = Math.floor(timeInSeconds / 60);
