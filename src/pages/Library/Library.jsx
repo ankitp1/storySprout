@@ -2,8 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
 import { Play, Settings, Users } from 'lucide-react';
+const formatTime = (timeInSeconds) => {
+  if (!timeInSeconds) return '0:00';
+  const m = Math.floor(timeInSeconds / 60);
+  const s = Math.floor(timeInSeconds % 60);
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+};
 
-const BookCard = ({ book, progress, readBooks, navigate, isGrid = false }) => (
+const BookCard = ({ book, progress, readBooks, navigate, isGrid = false, ratings }) => (
   <div 
     onClick={() => navigate(`/read/${book.id}`)}
     style={{
@@ -61,7 +67,6 @@ const BookCard = ({ book, progress, readBooks, navigate, isGrid = false }) => (
         </div>
       </div>
 
-      {/* Badges */}
       {readBooks.includes(book.id) ? (
         <div style={{
           position: 'absolute', top: '10px', right: '10px',
@@ -78,9 +83,22 @@ const BookCard = ({ book, progress, readBooks, navigate, isGrid = false }) => (
           borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold',
           boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
         }}>
-          ▶ Resume
+          ▶ Resume at {formatTime(progress[book.id].currentTime)}
         </div>
       ) : null}
+
+      {/* Ratings Badge */}
+      {ratings[book.id] && (
+        <div style={{
+          position: 'absolute', bottom: '10px', right: '10px',
+          background: 'white', color: '#FFD700', padding: '4px 8px',
+          borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold',
+          boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+          display: 'flex', alignItems: 'center', gap: '4px'
+        }}>
+          ⭐ {ratings[book.id]}/5
+        </div>
+      )}
     </div>
     <h3 style={{ margin: 0, textAlign: 'center', fontSize: '1.5rem', width: '100%', wordWrap: 'break-word', lineHeight: '1.2' }}>{book.title}</h3>
     
@@ -98,6 +116,7 @@ export default function Library() {
   const profiles = useStore(state => state.profiles);
   const progress = useStore(state => state.progress[state.activeProfileId] || {});
   const readBooks = useStore(state => state.readBooks[state.activeProfileId] || []);
+  const ratings = useStore(state => state.ratings?.[state.activeProfileId] || {});
   const navigate = useNavigate();
   
   const activeProfile = profiles.find(p => p.id === activeProfileId);
@@ -175,7 +194,7 @@ export default function Library() {
               }}>
                 {seriesBooks.map(book => (
                   <div key={book.id} style={{ scrollSnapAlign: 'start' }}>
-                    <BookCard book={book} progress={progress} readBooks={readBooks} navigate={navigate} />
+                    <BookCard book={book} progress={progress} readBooks={readBooks} ratings={ratings} navigate={navigate} />
                   </div>
                 ))}
               </div>
@@ -196,7 +215,7 @@ export default function Library() {
                 gap: '2.5rem'
               }}>
                 {standaloneBooks.map(book => (
-                  <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} navigate={navigate} isGrid={true} />
+                  <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} ratings={ratings} navigate={navigate} isGrid={true} />
                 ))}
               </div>
             </div>

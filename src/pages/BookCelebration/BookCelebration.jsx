@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
 import { getQuestionsForBook } from '../../lib/discussionQuestions';
-import { Trophy, MessageCircle } from 'lucide-react';
+import { Trophy, MessageCircle, Star } from 'lucide-react';
 import Confetti from 'react-confetti';
 import './BookCelebration.css';
 
@@ -12,10 +12,14 @@ export default function BookCelebration() {
   
   const book = useStore(state => state.books.find(b => b.id === bookId));
   const discussionQuestions = useStore(state => state.discussionQuestions);
+  const activeProfileId = useStore(state => state.activeProfileId);
+  const rateBook = useStore(state => state.rateBook);
+  const currentRating = useStore(state => state.ratings?.[activeProfileId]?.[bookId] || 0);
   
   const [questions, setQuestions] = useState(null);
   const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [windowDimensions, setWindowDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const [hoverRating, setHoverRating] = useState(0);
 
   useEffect(() => {
     const handleResize = () => setWindowDimensions({ width: window.innerWidth, height: window.innerHeight });
@@ -67,6 +71,26 @@ export default function BookCelebration() {
           alt={book.title}
           className="celebration-cover"
         />
+
+        {/* Star Rating Widget */}
+        <div style={{ margin: '2rem 0', padding: '1.5rem', background: 'var(--bg-color)', borderRadius: '16px' }}>
+          <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)' }}>Rate this book:</h3>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Star
+                key={star}
+                size={40}
+                style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
+                fill={(hoverRating || currentRating) >= star ? '#FFD700' : 'none'}
+                color={(hoverRating || currentRating) >= star ? '#FFD700' : 'var(--text-muted)'}
+                onMouseEnter={() => setHoverRating(star)}
+                onMouseLeave={() => setHoverRating(0)}
+                onClick={() => rateBook(bookId, star)}
+              />
+            ))}
+          </div>
+          {currentRating > 0 && <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>Rating saved!</p>}
+        </div>
         
         {questions && (
           <div className="discussion-section">

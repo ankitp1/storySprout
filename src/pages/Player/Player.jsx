@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import { ArrowLeft, Play, Pause, SkipBack, SkipForward, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Play, Pause, SkipBack, SkipForward, RotateCcw, Moon } from 'lucide-react';
 import './Player.css';
 
 export default function Player() {
@@ -23,8 +23,12 @@ export default function Player() {
   const [currentTime, setCurrentTime] = useState(progress.currentTime || 0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
+  const [sleepTimerRemaining, setSleepTimerRemaining] = useState(null);
+  const [showSleepTimerMenu, setShowSleepTimerMenu] = useState(false);
+  const [hasAppliedSmartResume, setHasAppliedSmartResume] = useState(false);
   
   const audioRef = useRef(null);
+  const timerIntervalRef = useRef(null);
   
   // Guard against missing book
   if (!book) {
@@ -39,17 +43,51 @@ export default function Player() {
   const chapters = book.chapters || [];
   const currentChapter = chapters[chapterIndex] || chapters[0];
 
+  // Smart Resume Logic
   useEffect(() => {
-    // When chapter index changes, update current time to 0 if it's a new chapter
-    // otherwise respect the saved progress time on initial load
-    if (audioRef.current) {
-      if (chapterIndex === progress.chapterIndex && progress.currentTime > 0) {
-        audioRef.current.currentTime = progress.currentTime;
-      } else {
-        audioRef.current.currentTime = 0;
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const setAudioData = () => {
+      setDuration(audio.duration || 0);
+      if (!hasAppliedSmartResume) {
+        // Smart Resume: Rewind 5 seconds from saved progress
+        const resumeTime = Math.max(0, progress.currentTime - 5);
+        audio.currentTime = resumeTime;
+        setCurrentTime(resumeTime);
+        setHasAppliedSmartResume(true);
       }
+    };
+
+    audio.addEventListener('loadedmetadata', setAudioData);
+    return () => audio.removeEventListener('loadedmetadata', setAudioData);
+  }, [hasAppliedSmartResume, progress.currentTime]);
+
+  // Sleep Timer Logic
+  useEffect(() => {
+    if (sleepTimerRemaining !== null && sleepTimerRemaining > 0 && isPlaying) {
+      timerIntervalRef.current = setInterval(() => {
+        setSleepTimerRemaining(prev => {
+          if (prev <= 1) {
+            setIsPlaying(false);
+            audioRef.current?.pause();
+            updateProgress(bookId, chapterIndex, audioRef.current?.currentTime || 0);
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(timerIntervalRef.current);
     }
-  }, [chapterIndex]);
+    return () => clearInterval(timerIntervalRef.current);
+  }, [sleepTimerRemaining, isPlaying, bookId, chapterIndex, updateProgress]);
+
+  const setSleepTimer = (minutes) => {
+    setSleepTimerRemaining(minutes * 60);
+    setShowSleepTimerMenu(false);
+    if (!isPlaying) togglePlay();
+  };
 
   // Track session
   useEffect(() => {
@@ -57,17 +95,15 @@ export default function Player() {
   }, [bookId, incrementSessionCount]);
 
   useEffect(() => {
-    // Save progress periodically
     const interval = setInterval(() => {
       if (audioRef.current && isPlaying) {
         updateProgress(bookId, chapterIndex, audioRef.current.currentTime);
-        updateListeningStats(bookId, 3); // Accumulate 3 seconds
+        updateListeningStats(bookId, 3);
       }
     }, 3000);
     return () => clearInterval(interval);
   }, [bookId, chapterIndex, isPlaying, updateProgress, updateListeningStats]);
 
-  // Handle unmount save
   useEffect(() => {
     return () => {
       if (audioRef.current) {
@@ -95,6 +131,7 @@ export default function Player() {
 
   const nextChapter = () => {
     if (chapterIndex < chapters.length - 1) {
+      setHasAppliedSmartResume(false);
       setChapterIndex(chapterIndex + 1);
       setIsPlaying(true);
       setTimeout(() => { if (audioRef.current) audioRef.current.play(); }, 100);
@@ -103,6 +140,7 @@ export default function Player() {
 
   const prevChapter = () => {
     if (chapterIndex > 0) {
+      setHasAppliedSmartResume(false);
       setChapterIndex(chapterIndex - 1);
       setIsPlaying(true);
       setTimeout(() => { if (audioRef.current) audioRef.current.play(); }, 100);
@@ -112,7 +150,6 @@ export default function Player() {
   const handleTimeUpdate = () => {
     if (audioRef.current) {
       setCurrentTime(audioRef.current.currentTime);
-      setDuration(audioRef.current.duration || 0);
     }
   };
 
@@ -125,98 +162,63 @@ export default function Player() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-color)' }}>
-      {/* Top Navigation */}
       <div style={{ padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', background: 'transparent', zIndex: 10 }}>
         <button onClick={() => navigate('/')} className="btn-icon" style={{ width: '64px', height: '64px', marginRight: '1.5rem', background: 'white', boxShadow: 'var(--shadow-md)' }}>
           <ArrowLeft size={32} />
         </button>
       </div>
 
-      {/* Main Content Area (Cover Art) */}
-      <div style={{ 
-        flex: 1, 
-        display: 'flex', 
-        flexDirection: 'column',
-        justifyContent: 'center', 
-        alignItems: 'center',
-        padding: '2rem',
-        marginTop: '-80px' // Offset top nav
-      }}>
-        <img 
-          src={book.coverUrl} 
-          alt={book.title} 
-          style={{ 
-            width: '300px', 
-            height: '400px', 
-            objectFit: 'cover', 
-            borderRadius: '24px', 
-            boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-            marginBottom: '2rem'
-          }} 
-        />
-        <h1 style={{ margin: 0, fontSize: '2.5rem', textAlign: 'center', maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {book.title}
-        </h1>
-        <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-          {currentChapter?.name || `Chapter ${chapterIndex + 1}`}
-        </p>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '2rem', marginTop: '-80px' }}>
+        <img src={book.coverUrl} alt={book.title} style={{ width: '300px', height: '400px', objectFit: 'cover', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', marginBottom: '2rem' }} />
+        <h1 style={{ margin: 0, fontSize: '2.5rem', textAlign: 'center', maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{book.title}</h1>
+        <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>{currentChapter?.name || `Chapter ${chapterIndex + 1}`}</p>
       </div>
 
-      {/* Hidden Audio Element */}
-      <audio 
-        ref={audioRef}
-        src={currentChapter?.url} 
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleTimeUpdate}
-        onEnded={() => {
-          if (chapterIndex < chapters.length - 1) {
-            nextChapter();
-          } else {
-            setIsPlaying(false);
-            markBookAsRead(bookId);
-            navigate(`/book-celebration/${bookId}`);
-          }
-        }}
-      />
+      <audio ref={audioRef} src={currentChapter?.url} onTimeUpdate={handleTimeUpdate} onEnded={() => {
+        if (chapterIndex < chapters.length - 1) {
+          nextChapter();
+        } else {
+          setIsPlaying(false);
+          markBookAsRead(bookId);
+          navigate(`/book-celebration/${bookId}`);
+        }
+      }} />
 
-      {/* Bottom Controls */}
-      <div style={{ 
-        background: 'var(--surface-color)', 
-        padding: '2rem 3rem', 
-        display: 'flex', 
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '2rem',
-        boxShadow: '0 -10px 40px rgba(0,0,0,0.05)',
-        borderTopLeftRadius: '40px',
-        borderTopRightRadius: '40px',
-        zIndex: 10
-      }}>
+      <div style={{ background: 'var(--surface-color)', padding: '2rem 3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', boxShadow: '0 -10px 40px rgba(0,0,0,0.05)', borderTopLeftRadius: '40px', borderTopRightRadius: '40px', zIndex: 10 }}>
         
-        {/* Progress Bar */}
         <div style={{ width: '100%', maxWidth: '800px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <span style={{ fontSize: '1rem', color: 'var(--text-muted)', width: '50px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatTime(currentTime)}</span>
           <div style={{ flex: 1, height: '12px', background: 'var(--border)', borderRadius: '6px', overflow: 'hidden', position: 'relative' }}>
-            <div style={{ 
-              position: 'absolute', 
-              top: 0, left: 0, bottom: 0, 
-              background: 'var(--primary)', 
-              width: `${duration ? (currentTime / duration) * 100 : 0}%`,
-              transition: 'width 0.1s linear'
-            }} />
+            <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, background: 'var(--primary)', width: `${duration ? (currentTime / duration) * 100 : 0}%`, transition: 'width 0.1s linear' }} />
           </div>
           <span style={{ fontSize: '1rem', color: 'var(--text-muted)', width: '50px', fontFamily: 'var(--font-mono)' }}>{formatTime(duration)}</span>
         </div>
 
-        <div className="player-controls-container">
-          
-          <button 
-            onClick={rewind15}
-            className="btn-icon player-btn-secondary" 
-            title="Rewind 15 Seconds"
-          >
-            <RotateCcw size={32} color="var(--text-muted)" />
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem', position: 'relative' }}>
+          <button className="btn-icon" onClick={() => setShowSleepTimerMenu(!showSleepTimerMenu)} style={{ color: sleepTimerRemaining ? 'var(--primary)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-color)', padding: '0.5rem 1rem', borderRadius: '20px' }}>
+            <Moon size={20} fill={sleepTimerRemaining ? 'var(--primary)' : 'none'} />
+            {sleepTimerRemaining ? <span style={{ fontWeight: 'bold' }}>{formatTime(sleepTimerRemaining)}</span> : <span>Sleep Timer</span>}
           </button>
+          {showSleepTimerMenu && (
+            <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '1rem', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', zIndex: 10 }}>
+              <button className="btn-secondary" onClick={() => setSleepTimer(10)}>10m</button>
+              <button className="btn-secondary" onClick={() => setSleepTimer(15)}>15m</button>
+              <button className="btn-secondary" onClick={() => setSleepTimer(20)}>20m</button>
+              <button className="btn-secondary" onClick={() => setSleepTimer(30)}>30m</button>
+              <button className="btn-icon" onClick={() => setSleepTimerRemaining(null)}>Off</button>
+            </div>
+          )}
+        </div>
+
+        <div className="player-controls-container">
+          <div className="player-controls-grid">
+            <button 
+              onClick={rewind15}
+              className="btn-icon player-btn-secondary" 
+              title="Rewind 15 Seconds"
+            >
+              <RotateCcw size={32} color="var(--text-muted)" />
+            </button>
 
           <button 
             onClick={prevChapter}
@@ -245,8 +247,9 @@ export default function Player() {
             <SkipForward size={32} color="var(--text-main)" />
           </button>
 
-          {/* Placeholder to balance the rewind button */}
-          <div className="player-btn-placeholder"></div>
+            {/* Placeholder to balance the rewind button */}
+            <div className="player-btn-placeholder"></div>
+          </div>
         </div>
       </div>
     </div>

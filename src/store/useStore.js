@@ -127,6 +127,21 @@ const useStore = create(
         };
       }),
 
+      ratings: {},
+      rateBook: (bookId, rating) => set((state) => {
+        if (!state.activeProfileId) return state;
+        const profileRatings = state.ratings[state.activeProfileId] || {};
+        return {
+          ratings: {
+            ...state.ratings,
+            [state.activeProfileId]: {
+              ...profileRatings,
+              [bookId]: rating
+            }
+          }
+        };
+      }),
+
       discussionQuestions: [],
       setDiscussionQuestions: (questions) => set({ discussionQuestions: questions }),
     }),
@@ -145,19 +160,24 @@ const useStore = create(
             activeProfileId: defaultProfileId,
             
             // Scope existing progress
-            progress: Object.keys(persistedState.progress || {}).length > 0 
-              ? { [defaultProfileId]: persistedState.progress } 
-              : {},
-              
-            // Scope existing readBooks
-            readBooks: Array.isArray(persistedState.readBooks) && persistedState.readBooks.length > 0
-              ? { [defaultProfileId]: persistedState.readBooks }
-              : {},
-              
-            // Scope existing listeningStats
-            listeningStats: Object.keys(persistedState.listeningStats || {}).length > 0
-              ? { [defaultProfileId]: persistedState.listeningStats }
-              : {},
+            progress: {
+              [defaultProfileId]: persistedState.progress || {}
+            },
+            
+            // Scope existing read books
+            readBooks: {
+              [defaultProfileId]: persistedState.readBooks || []
+            },
+            
+            // Scope existing listening stats
+            listeningStats: {
+              [defaultProfileId]: persistedState.listeningStats || {}
+            },
+            
+            // Migrate ratings if any exist
+            ratings: {
+              [defaultProfileId]: persistedState.ratings || {}
+            }
           };
         }
         return persistedState;

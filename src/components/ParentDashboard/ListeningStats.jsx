@@ -6,6 +6,7 @@ export default function ListeningStats({ profileId }) {
   const listeningStats = useStore(state => state.listeningStats[profileId] || {});
   const books = useStore(state => state.books);
   const discussionQuestions = useStore(state => state.discussionQuestions);
+  const ratings = useStore(state => state.ratings[profileId] || {});
 
   const completedBooks = books.filter(b => listeningStats[b.id]?.completed);
 
@@ -42,10 +43,20 @@ export default function ListeningStats({ profileId }) {
                 />
                 
                 <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.1rem' }}>{book.title}</h3>
-                  <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '1.1rem' }}>
+                    {book.title}
+                  </h4>
+                  <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
                     ⏱️ {(stats.totalTimeSeconds / 3600).toFixed(1)} hrs total
                   </p>
+                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                    Completed: {new Date(stats.completedAt).toLocaleDateString()}
+                  </p>
+                  {ratings[book.id] && (
+                    <p style={{ margin: '0.25rem 0 0 0', color: '#FFD700', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                      ⭐ {ratings[book.id]} / 5
+                    </p>
+                  )}
                 </div>
                 
                 {hasQuestions ? (
