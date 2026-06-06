@@ -3,10 +3,13 @@ import useStore from '../../store/useStore';
 import { getQuestionsForBook } from '../../lib/discussionQuestions';
 
 export default function ListeningStats({ profileId }) {
-  const listeningStats = useStore(state => state.listeningStats[profileId] || {});
+  const listeningStatsMap = useStore(state => state.listeningStats[profileId]);
+  const ratingsMap = useStore(state => state.ratings[profileId]);
   const books = useStore(state => state.books);
   const discussionQuestions = useStore(state => state.discussionQuestions);
-  const ratings = useStore(state => state.ratings[profileId] || {});
+  
+  const listeningStats = listeningStatsMap || {};
+  const ratings = ratingsMap || {};
 
   const completedBooks = books.filter(b => listeningStats[b.id]?.completed);
 

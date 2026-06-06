@@ -126,13 +126,21 @@ export default function Library() {
   const books = useStore(state => state.books);
   const activeProfileId = useStore(state => state.activeProfileId);
   const profiles = useStore(state => state.profiles);
-  const progress = useStore(state => state.progress[state.activeProfileId] || {});
-  const readBooks = useStore(state => state.readBooks[state.activeProfileId] || []);
-  const ratings = useStore(state => state.ratings?.[state.activeProfileId] || {});
-  const listeningStats = useStore(state => state.listeningStats[state.activeProfileId] || {});
-  const approvedBooks = useStore(state => state.approvedBooks[state.activeProfileId] || []);
-  const points = useStore(state => state.points[state.activeProfileId] || 0);
-  const unlockedAvatars = useStore(state => state.unlockedAvatars[state.activeProfileId] || []);
+  const progressMap = useStore(state => state.progress[state.activeProfileId]);
+  const readBooksArr = useStore(state => state.readBooks[state.activeProfileId]);
+  const ratingsMap = useStore(state => state.ratings?.[state.activeProfileId]);
+  const listeningStatsMap = useStore(state => state.listeningStats[state.activeProfileId]);
+  const approvedBooksArr = useStore(state => state.approvedBooks[state.activeProfileId]);
+  const pointsVal = useStore(state => state.points[state.activeProfileId]);
+  const unlockedAvatarsArr = useStore(state => state.unlockedAvatars[state.activeProfileId]);
+
+  const progress = progressMap || {};
+  const readBooks = readBooksArr || [];
+  const ratings = ratingsMap || {};
+  const listeningStats = listeningStatsMap || {};
+  const approvedBooks = approvedBooksArr || [];
+  const points = pointsVal || 0;
+  const unlockedAvatars = unlockedAvatarsArr || [];
   
   const approveBook = useStore(state => state.approveBook);
   const unlockAvatar = useStore(state => state.unlockAvatar);
