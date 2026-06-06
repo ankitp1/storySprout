@@ -9,6 +9,16 @@ import PINEntry from '../../components/ParentDashboard/PINEntry';
 import DashboardOverview from '../../components/ParentDashboard/DashboardOverview';
 import ListeningStats from '../../components/ParentDashboard/ListeningStats';
 
+const getCleanSearchQuery = (title) => {
+  if (!title) return '';
+  // Replace modifier letters (like exotic colons) and regular colons/dashes with spaces
+  let clean = title.replace(/[:\-꞉]/g, ' ');
+  // Remove content in brackets or parentheses (e.g., [Unabridged], (Binaural))
+  clean = clean.replace(/\[.*?\]|\(.*?\)/g, '');
+  // Normalize extra spaces
+  return clean.replace(/\s+/g, ' ').trim();
+};
+
 export default function Dashboard() {
   const { books, addBook, removeBook, isAdmin, setAdminStatus, profiles, activeProfileId } = useStore();
   const navigate = useNavigate();
@@ -260,7 +270,7 @@ export default function Dashboard() {
               <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>Check Appropriateness & Reviews</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <a 
-                  href={`https://www.amazon.com/s?k=${encodeURIComponent(selectedBookInfo.title + ' book review')}`} 
+                  href={`https://www.amazon.com/s?k=${encodeURIComponent(getCleanSearchQuery(selectedBookInfo.title) + ' book review')}`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="btn-secondary"
@@ -271,7 +281,7 @@ export default function Dashboard() {
                 </a>
                 
                 <a 
-                  href={`https://www.commonsensemedia.org/search/${encodeURIComponent(selectedBookInfo.title)}`} 
+                  href={`https://www.commonsensemedia.org/search/${encodeURIComponent(getCleanSearchQuery(selectedBookInfo.title))}`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="btn-secondary"
