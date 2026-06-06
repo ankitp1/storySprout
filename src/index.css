@@ -96,6 +96,7 @@
 .high-contrast {
   --bg-color: #000000;
   --surface-color: #111111;
+  --surface-light: #222222;
   --text-main: #FFFFFF;
   --text-secondary: #FFFFFF;
   --text-muted: #CCCCCC;
