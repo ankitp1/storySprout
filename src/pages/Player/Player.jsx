@@ -223,7 +223,6 @@ export default function Player() {
       <audio 
         ref={audioRef} 
         src={currentChapter?.id ? `https://www.googleapis.com/drive/v3/files/${currentChapter.id}?alt=media&key=${import.meta.env.VITE_GOOGLE_API_KEY}&acknowledgeAbuse=true` : undefined} 
-        crossOrigin="anonymous"
         onTimeUpdate={handleTimeUpdate} 
         onEnded={() => {
           // Award points for finishing a chapter!
