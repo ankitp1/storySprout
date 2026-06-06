@@ -35,7 +35,13 @@ const useStore = create(
 
       // Library State
       books: [],
-      addBook: (book) => set((state) => ({ books: [...state.books, book] })),
+      addBook: (book) => set((state) => {
+        // Prevent adding duplicate books
+        if (state.books.some(b => b.id === book.id)) {
+          return state;
+        }
+        return { books: [...state.books, book] };
+      }),
       removeBook: (bookId) => set((state) => ({ books: state.books.filter(b => b.id !== bookId) })),
       
       // Reading State
