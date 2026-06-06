@@ -1,79 +1,59 @@
 # 🌱 StorySprout
 
-StorySprout is a beautiful, kid-friendly, 100% frontend audiobook player that connects directly to a public Google Drive folder. Designed for young children (ages 4+), it features a distraction-free interface, massive navigation buttons, seamless progress saving, and automatic synchronization of audio files and cover art.
-
----
+StorySprout is a 100% frontend, legacy-friendly (iOS 9.3.5 compatible) web application designed to act as a distraction-free audiobook player for kids. It sources audio directly from a shared Google Drive folder, eliminating the need for complex backend infrastructure, subscriptions, or storage limits.
 
 ## ✨ Features
 
-- **Google Drive Integration**: Zero backend required! The app connects directly to a Google Drive folder using the Google Drive v3 API. All you need is a shareable folder link and a free API Key.
-- **Nested Series Support**: Organize your Google Drive with a 2-tier architecture. Put standalone books in one folder, and group related books (like "Magic Tree House") inside a Parent Series Folder. The app automatically detects this structure and groups them into Netflix-style horizontal rows!
-- **Automatic Cover Art**: Drop a `cover.jpg` inside the folder, and StorySprout will use it. If a cover isn't found, it seamlessly talks to the Google Books API to download the official book cover.
-- **Smart Progress Tracking**: Auto-saves playback position every 3 seconds to local storage. Books instantly show "▶ Resume" or "⭐ Finished!" badges in the library, picking up exactly where the child left off.
-- **Kid-Friendly Player UI**: Full-screen immersive player, zero complex menus, giant Play/Pause buttons, and a huge "Rewind 15s" button.
-- **Parent Dashboard**: A hidden admin interface to easily manually trigger library syncs.
+- **Google Drive Integration**: Audiobooks are fetched dynamically from a public Google Drive folder. Books and chapters are automatically parsed from folders and audio files.
+- **Legacy Device Support**: Built with minimal modern JavaScript and lightweight dependencies to ensure it runs smoothly on older devices like iPad minis running iOS 9.3.5.
+- **Multi-Profile Support**: "Netflix-style" profile selection allows multiple children to use the same device with completely independent progression, libraries, and stats. Kids can pick their own cute avatars!
+- **Smart Bookmarks**: The app remembers exact timestamps for *every* book. The library shelf displays "▶ Resume at [MM:SS]" badges so kids never lose their spot.
+- **Smart Resume**: When resuming a book, the player automatically rewinds 5 seconds to provide a quick refresher.
+- **Sleep Timer**: A built-in timer (10-30 mins) safely pauses playback to prevent battery drain if a child falls asleep.
+- **Book Celebrations & Ratings**: When a child finishes a book, they get a confetti celebration and a 5-star rating widget!
+- **Library Discovery**: A kid-friendly search bar, filter pills (Completed, Favorites, Series), and sorting (A-Z, Last Played) make browsing easy for growing libraries.
+- **Accessibility Enhancements**: Includes full keyboard navigation (`Space` to play/pause, Arrows to skip) and a High-Contrast mode toggle for children with vision challenges.
+- **Parent Dashboard**: Secured behind a PIN (`1234`), the dashboard displays detailed listening stats, completed books, total listening time, and discussion questions (synced from a live Google Sheet) for the active child profile.
 
----
+## 🚀 Tech Stack
 
-## 📁 Google Drive Setup
+- **Framework**: React (Vite)
+- **Routing**: React Router
+- **State Management**: Zustand (with localForage for persistent offline storage)
+- **Styling**: Vanilla CSS (Tailwind-free for maximum legacy compatibility)
+- **Icons**: Lucide React
+- **Deployment**: Vercel
 
-Organize your audiobook folder exactly like this:
+## 🛠️ Setup & Local Development
 
-```text
-📚 Main Audiobook Folder (Set to: "Anyone with the link can view")
- ├── 📁 Magic Tree House (A Series Folder)
- │    ├── 🖼️ cover.jpg (Optional: Series Cover Art)
- │    ├── 📁 Book 1 - Dinosaurs Before Dark
- │    │    ├── 🎵 Chapter 1.mp3
- │    │    └── 🎵 Chapter 2.mp3
- │    └── 📁 Book 2 - The Knight at Dawn
- │         └── 🎵 Chapter 1.mp3
- └── 📁 Harry Potter (A Standalone Book Folder)
-      ├── 🖼️ cover.png (Optional: Specific Cover Art)
-      └── 🎵 01.mp3
-```
-
----
-
-## 🚀 Deployment (Vercel)
-
-StorySprout is a Vite React application designed to be deployed for free on Vercel.
-
-1. Fork or push this repository to your GitHub account.
-2. Sign in to [Vercel](https://vercel.com/) and create a **New Project**.
-3. Import your `StorySprout` repository.
-4. Add the following **Environment Variables** in the deployment settings:
-   - `VITE_GOOGLE_DRIVE_FOLDER_ID` = `Your Google Drive Folder ID`
-   - `VITE_GOOGLE_API_KEY` = `Your Google Cloud API Key`
-5. Click **Deploy**. Your app is now live!
-
----
-
-## 🛠️ Local Development
-
-If you want to run or modify the app locally:
-
-1. Clone the repository:
+1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/storySprout.git
-   cd kids-reading-app
+   git clone https://github.com/ankitp1/storySprout.git
+   cd storySprout
    ```
 
-2. Install dependencies:
+2. **Install dependencies:**
    ```bash
    npm install
    ```
 
-3. Create a `.env` file in the root directory and add your keys:
-   ```env
-   VITE_GOOGLE_DRIVE_FOLDER_ID=your_folder_id_here
-   VITE_GOOGLE_API_KEY=your_api_key_here
-   ```
-
-4. Start the dev server:
+3. **Start the development server:**
    ```bash
    npm run dev
    ```
 
----
-*Built with React, Zustand, localForage, and Lucide Icons.*
+4. **Build for production:**
+   ```bash
+   npm run build
+   ```
+
+## 📚 Adding Books
+
+To add new books to the app, simply drop them into the connected Google Drive folder.
+- Ensure each book is in its own subfolder (e.g., `The Hobbit`).
+- Inside the book folder, place the audio files in alphabetical order or prepend numbers (e.g., `01 - Chapter 1.mp3`).
+- If you want a custom cover, include a `cover.jpg` or `cover.png` in the book folder. If omitted, the app will automatically try to fetch cover art from the Google Books API!
+
+## ❓ Discussion Questions
+
+The app fetches discussion questions from a live, published Google Sheets CSV. Parents can update the sheet with new questions, fix typos, or add new books without ever needing to touch the code or redeploy the app!
