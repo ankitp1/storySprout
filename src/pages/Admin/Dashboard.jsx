@@ -4,6 +4,7 @@ import useStore from '../../store/useStore';
 import { LogOut, RefreshCw, Trash2, BookOpen, Key, Link } from 'lucide-react';
 import { fetchBooksFromDrive } from '../../services/googleDrive';
 import { fetchBookCover } from '../../services/googleBooks';
+import { clearDriveCache, setDriveCache } from '../../lib/driveCache';
 
 export default function Dashboard() {
   const { books, addBook, removeBook, setAdminStatus } = useStore();
@@ -26,6 +27,9 @@ export default function Dashboard() {
     setStatusMsg('Connecting to Google Drive...');
 
     try {
+      // Bust cache since this is a manual override
+      await clearDriveCache();
+
       const fetchedBooks = await fetchBooksFromDrive();
       
       if (fetchedBooks.length === 0) {
@@ -52,6 +56,8 @@ export default function Dashboard() {
         
         addBook(book);
       }
+
+      await setDriveCache(fetchedBooks);
 
       setStatusMsg(`Success! Synced ${fetchedBooks.length} books to the library.`);
     } catch (err) {

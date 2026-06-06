@@ -1,0 +1,64 @@
+/* src/pages/Player/Player.css */
+.player-controls-container {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+}
+
+.player-btn-giant {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 30px rgba(255, 107, 107, 0.4);
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.player-btn-giant:active {
+  transform: scale(0.95);
+}
+
+.player-btn-secondary {
+  width: 72px;
+  height: 72px;
+  background: var(--bg-color);
+  flex-shrink: 0;
+}
+
+.player-btn-placeholder {
+  width: 72px;
+  flex-shrink: 0;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 640px) {
+  .player-controls-container {
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+  
+  /* Row 1: Play/Pause button takes full width of row to sit on top */
+  .player-btn-giant {
+    order: -1; /* Push to the top row */
+    margin: 0 auto;
+  }
+  
+  /* Reduce secondary button sizes slightly */
+  .player-btn-secondary {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .player-btn-placeholder {
+    display: none; /* Remove placeholder on mobile to allow exact centering */
+  }
+}

@@ -35,9 +35,52 @@ const useStore = create(
       
       // Completed Books
       readBooks: [],
-      markBookAsRead: (bookId) => set((state) => ({
-        readBooks: state.readBooks.includes(bookId) ? state.readBooks : [...state.readBooks, bookId]
-      })),
+      markBookAsRead: (bookId) => set((state) => {
+        const now = new Date().toISOString();
+        return {
+          readBooks: state.readBooks.includes(bookId) ? state.readBooks : [...state.readBooks, bookId],
+          listeningStats: {
+            ...state.listeningStats,
+            [bookId]: {
+              ...(state.listeningStats[bookId] || {}),
+              completed: true,
+              completedAt: now
+            }
+          }
+        };
+      }),
+
+      // Analytics & Discussion
+      listeningStats: {},
+      updateListeningStats: (bookId, currentTimeAdded) => set((state) => {
+        const currentStats = state.listeningStats[bookId] || { totalTimeSeconds: 0, sessionsCount: 0 };
+        return {
+          listeningStats: {
+            ...state.listeningStats,
+            [bookId]: {
+              ...currentStats,
+              totalTimeSeconds: currentStats.totalTimeSeconds + currentTimeAdded,
+              lastListenedAt: new Date().toISOString()
+            }
+          }
+        };
+      }),
+      
+      incrementSessionCount: (bookId) => set((state) => {
+        const currentStats = state.listeningStats[bookId] || { totalTimeSeconds: 0, sessionsCount: 0 };
+        return {
+          listeningStats: {
+            ...state.listeningStats,
+            [bookId]: {
+              ...currentStats,
+              sessionsCount: currentStats.sessionsCount + 1
+            }
+          }
+        };
+      }),
+
+      discussionQuestions: [],
+      setDiscussionQuestions: (questions) => set({ discussionQuestions: questions }),
     }),
     {
       name: 'rowans-library-storage', // name of the item in the storage (must be unique)

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
 import { ArrowLeft, Play, Pause, SkipBack, SkipForward, RotateCcw } from 'lucide-react';
+import './Player.css';
 
 export default function Player() {
   const { bookId } = useParams();
@@ -11,6 +12,8 @@ export default function Player() {
   const progress = useStore(state => state.progress[bookId]) || { chapterIndex: 0, currentTime: 0 };
   const updateProgress = useStore(state => state.updateProgress);
   const markBookAsRead = useStore(state => state.markBookAsRead);
+  const updateListeningStats = useStore(state => state.updateListeningStats);
+  const incrementSessionCount = useStore(state => state.incrementSessionCount);
 
   // Audio State
   const [chapterIndex, setChapterIndex] = useState(progress.chapterIndex || 0);
@@ -45,15 +48,21 @@ export default function Player() {
     }
   }, [chapterIndex]);
 
+  // Track session
+  useEffect(() => {
+    incrementSessionCount(bookId);
+  }, [bookId, incrementSessionCount]);
+
   useEffect(() => {
     // Save progress periodically
     const interval = setInterval(() => {
       if (audioRef.current && isPlaying) {
         updateProgress(bookId, chapterIndex, audioRef.current.currentTime);
+        updateListeningStats(bookId, 3); // Accumulate 3 seconds
       }
     }, 3000);
     return () => clearInterval(interval);
-  }, [bookId, chapterIndex, isPlaying, updateProgress]);
+  }, [bookId, chapterIndex, isPlaying, updateProgress, updateListeningStats]);
 
   // Handle unmount save
   useEffect(() => {
@@ -196,12 +205,11 @@ export default function Player() {
           <span style={{ fontSize: '1rem', color: 'var(--text-muted)', width: '50px', fontFamily: 'var(--font-mono)' }}>{formatTime(duration)}</span>
         </div>
 
-        <div style={{ display: 'flex', width: '100%', justifyContent: 'center', alignItems: 'center', gap: '2rem' }}>
+        <div className="player-controls-container">
           
           <button 
             onClick={rewind15}
-            className="btn-icon" 
-            style={{ width: '72px', height: '72px', background: 'var(--bg-color)' }}
+            className="btn-icon player-btn-secondary" 
             title="Rewind 15 Seconds"
           >
             <RotateCcw size={32} color="var(--text-muted)" />
@@ -209,8 +217,8 @@ export default function Player() {
 
           <button 
             onClick={prevChapter}
-            className="btn-icon" 
-            style={{ width: '72px', height: '72px', opacity: chapterIndex <= 0 ? 0.3 : 1, background: 'var(--bg-color)' }} 
+            className="btn-icon player-btn-secondary" 
+            style={{ opacity: chapterIndex <= 0 ? 0.3 : 1 }} 
             disabled={chapterIndex <= 0}
             title="Previous Chapter"
           >
@@ -219,24 +227,15 @@ export default function Player() {
           
           <button 
             onClick={togglePlay}
-            style={{ 
-              width: '100px', height: '100px', borderRadius: '50%', 
-              background: 'var(--primary)', color: 'white',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 12px 30px rgba(255, 107, 107, 0.4)',
-              border: 'none', cursor: 'pointer', transition: 'transform 0.2s ease'
-            }}
-            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+            className="player-btn-giant"
           >
             {isPlaying ? <Pause size={48} fill="currentColor" /> : <Play size={48} fill="currentColor" style={{ marginLeft: '8px' }} />}
           </button>
 
           <button 
             onClick={nextChapter}
-            className="btn-icon" 
-            style={{ width: '72px', height: '72px', opacity: chapterIndex >= chapters.length - 1 ? 0.3 : 1, background: 'var(--bg-color)' }} 
+            className="btn-icon player-btn-secondary" 
+            style={{ opacity: chapterIndex >= chapters.length - 1 ? 0.3 : 1 }} 
             disabled={chapterIndex >= chapters.length - 1}
             title="Next Chapter"
           >
@@ -244,7 +243,7 @@ export default function Player() {
           </button>
 
           {/* Placeholder to balance the rewind button */}
-          <div style={{ width: '72px' }}></div>
+          <div className="player-btn-placeholder"></div>
         </div>
       </div>
     </div>
