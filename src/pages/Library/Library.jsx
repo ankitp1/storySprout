@@ -21,110 +21,110 @@ const formatTime = (timeInSeconds) => {
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 };
 
-const BookCard = ({ book, progress, readBooks, onBookClick, isGrid = false, ratings }) => (
-  <div 
-    onClick={() => onBookClick(book)}
-    style={{
-      background: 'var(--surface-color)',
-      borderRadius: 'var(--radius-lg)',
-      padding: '1.5rem',
-      boxShadow: 'var(--shadow-md)',
-      cursor: 'pointer',
-      transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      position: 'relative',
-      overflow: 'hidden',
-      width: isGrid ? '100%' : '250px',
-      flexShrink: 0
-    }}
-    onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-10px) scale(1.02)'}
-    onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0) scale(1)'}
-  >
-    <div style={{ 
-      width: '100%', 
-      aspectRatio: '3/4', 
-      borderRadius: 'var(--radius-md)',
-      overflow: 'hidden',
-      boxShadow: 'var(--shadow-sm)',
-      marginBottom: '1.5rem',
-      position: 'relative'
-    }}>
-      <img 
-        src={book.coverUrl} 
-        alt={book.title} 
-        onError={(e) => {
-          e.target.onerror = null;
-          e.target.src = `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}`;
-        }}
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-      />
-      {/* Play Button Overlay */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'rgba(0,0,0,0.2)',
+const BookCard = ({ book, progress, readBooks, onBookClick, isGrid = false, ratings, ratio = '2/3' }) => {
+  const [imgError, setImgError] = useState(false);
+  return (
+    <div 
+      onClick={() => onBookClick(book)}
+      style={{
+        background: 'var(--surface-color)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '1.5rem',
+        boxShadow: 'var(--shadow-md)',
+        cursor: 'pointer',
+        transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        opacity: 0,
-        transition: 'opacity 0.2s',
+        position: 'relative',
+        overflow: 'hidden',
+        width: isGrid ? '100%' : '250px',
+        flexShrink: 0
       }}
-      className="play-overlay"
-      >
+      onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-10px) scale(1.02)'}
+      onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0) scale(1)'}
+    >
+      <div style={{ 
+        width: '100%', 
+        aspectRatio: ratio, 
+        borderRadius: 'var(--radius-md)',
+        overflow: 'hidden',
+        boxShadow: 'var(--shadow-sm)',
+        marginBottom: '1.5rem',
+        position: 'relative'
+      }}>
+        <img 
+          src={imgError ? `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}` : book.coverUrl} 
+          alt={book.title} 
+          onError={() => setImgError(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+        {/* Play Button Overlay */}
         <div style={{
-          width: '64px', height: '64px', borderRadius: '50%',
-          background: 'var(--primary)', color: 'var(--btn-text-color, white)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 15px rgba(255, 107, 107, 0.5)'
-        }}>
-          <Play size={32} fill="currentColor" style={{ marginLeft: '4px' }} />
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(0,0,0,0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: 0,
+          transition: 'opacity 0.2s',
+        }}
+        className="play-overlay"
+        >
+          <div style={{
+            width: '64px', height: '64px', borderRadius: '50%',
+            background: 'var(--primary)', color: 'var(--btn-text-color, white)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 15px rgba(255, 107, 107, 0.5)'
+          }}>
+            <Play size={32} fill="currentColor" style={{ marginLeft: '4px' }} />
+          </div>
         </div>
+
+        {readBooks.includes(book.id) ? (
+          <div style={{
+            position: 'absolute', top: '10px', right: '10px',
+            background: '#4caf50', color: 'white', padding: '4px 12px',
+            borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+          }}>
+            ⭐ Finished!
+          </div>
+        ) : progress[book.id] && progress[book.id].currentTime > 0 ? (
+          <div style={{
+            position: 'absolute', top: '10px', right: '10px',
+            background: 'var(--primary)', color: 'var(--btn-text-color, white)', padding: '4px 12px',
+            borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+          }}>
+            ▶ Resume {formatTime(progress[book.id].currentTime)}
+          </div>
+        ) : null}
+
+        {/* Ratings Badge */}
+        {ratings[book.id] && (
+          <div style={{
+            position: 'absolute', bottom: '10px', right: '10px',
+            background: 'white', color: '#FFD700', padding: '4px 8px',
+            borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+            display: 'flex', alignItems: 'center', gap: '4px'
+          }}>
+            ⭐ {ratings[book.id]}/5
+          </div>
+        )}
       </div>
-
-      {readBooks.includes(book.id) ? (
-        <div style={{
-          position: 'absolute', top: '10px', right: '10px',
-          background: '#4caf50', color: 'white', padding: '4px 12px',
-          borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold',
-          boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
-        }}>
-          ⭐ Finished!
-        </div>
-      ) : progress[book.id] && progress[book.id].currentTime > 0 ? (
-        <div style={{
-          position: 'absolute', top: '10px', right: '10px',
-          background: 'var(--primary)', color: 'var(--btn-text-color, white)', padding: '4px 12px',
-          borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold',
-          boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
-        }}>
-          ▶ Resume at {formatTime(progress[book.id].currentTime)}
-        </div>
-      ) : null}
-
-      {/* Ratings Badge */}
-      {ratings[book.id] && (
-        <div style={{
-          position: 'absolute', bottom: '10px', right: '10px',
-          background: 'white', color: '#FFD700', padding: '4px 8px',
-          borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold',
-          boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-          display: 'flex', alignItems: 'center', gap: '4px'
-        }}>
-          ⭐ {ratings[book.id]}/5
-        </div>
-      )}
+      <h3 style={{ margin: 0, textAlign: 'center', fontSize: '1.5rem', width: '100%', wordWrap: 'break-word', lineHeight: '1.2' }}>{book.title}</h3>
+      
+      <style>{`
+        div:hover > .play-overlay {
+          opacity: 1 !important;
+        }
+      `}</style>
     </div>
-    <h3 style={{ margin: 0, textAlign: 'center', fontSize: '1.5rem', width: '100%', wordWrap: 'break-word', lineHeight: '1.2' }}>{book.title}</h3>
-    
-    <style>{`
-      div:hover > .play-overlay {
-        opacity: 1 !important;
-      }
-    `}</style>
-  </div>
-);
+  );
+};
 
 export default function Library() {
   const books = useStore(state => state.books);
@@ -165,6 +165,7 @@ export default function Library() {
 
   // Avatar Shop State
   const [isShopOpen, setIsShopOpen] = useState(false);
+  const [modalImgError, setModalImgError] = useState(false);
 
   const handleBookClick = (book) => {
     const hasProgress = progress[book.id] && progress[book.id].currentTime > 0;

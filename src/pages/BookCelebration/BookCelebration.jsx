@@ -20,6 +20,7 @@ export default function BookCelebration() {
   const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [windowDimensions, setWindowDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [hoverRating, setHoverRating] = useState(0);
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setWindowDimensions({ width: window.innerWidth, height: window.innerHeight });
@@ -67,13 +68,10 @@ export default function BookCelebration() {
         <p>You finished <strong>{book.title}</strong>!</p>
         
         <img 
-          src={book.coverUrl} 
+          src={imgError ? `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}` : book.coverUrl} 
           alt={book.title} 
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}`;
-          }}
-          style={{ width: '200px', height: '300px', objectFit: 'cover', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', marginBottom: '2rem' }} 
+          onError={() => setImgError(true)}
+          style={{ width: '200px', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', marginBottom: '2rem' }} 
         />
 
         {/* Star Rating Widget */}

@@ -23,6 +23,7 @@ export default function Dashboard() {
   const { books, addBook, removeBook, isAdmin, setAdminStatus, profiles, activeProfileId } = useStore();
   const navigate = useNavigate();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [imgError, setImgError] = useState({});
   const [statusMsg, setStatusMsg] = useState('');
   const [selectedProfileId, setSelectedProfileId] = useState(activeProfileId || (profiles[0]?.id || null));
   
@@ -160,12 +161,9 @@ export default function Dashboard() {
               books.map(book => (
                 <div key={book.id} style={{ display: 'flex', alignItems: 'center', padding: '1rem', borderRadius: 'var(--radius-md)', gap: '1rem', border: '1px solid var(--border)' }}>
                   <img 
-                    src={book.coverUrl} 
+                    src={imgError[book.id] ? `https://placehold.co/60x80/e2e8f0/475569?text=Cover` : book.coverUrl} 
                     alt={book.title} 
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = `https://placehold.co/60x80/e2e8f0/475569?text=Cover`;
-                    }}
+                    onError={() => setImgError(prev => ({ ...prev, [book.id]: true }))}
                     style={{ width: '60px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} 
                   />
                   <div style={{ flex: 1 }}>
@@ -234,12 +232,9 @@ export default function Dashboard() {
             
             <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', alignItems: 'flex-start' }}>
               <img 
-                src={selectedBookInfo.coverUrl} 
+                src={imgError['selected'] ? `https://placehold.co/80x120/e2e8f0/475569?text=Cover` : selectedBookInfo.coverUrl} 
                 alt="Cover" 
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `https://placehold.co/80x120/e2e8f0/475569?text=Cover`;
-                }}
+                onError={() => setImgError(prev => ({ ...prev, selected: true }))}
                 style={{ width: '80px', borderRadius: '8px' }} 
               />
               <div>

@@ -28,6 +28,7 @@ export default function Player() {
   const [showSleepTimerMenu, setShowSleepTimerMenu] = useState(false);
   const [hasAppliedSmartResume, setHasAppliedSmartResume] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+  const [imgError, setImgError] = useState(false);
   
   const audioRef = useRef(null);
   const timerIntervalRef = useRef(null);
@@ -211,12 +212,9 @@ export default function Player() {
           </div>
         )}
         <img 
-          src={book.coverUrl} 
+          src={imgError ? `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}` : book.coverUrl} 
           alt={book.title} 
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}`;
-          }}
+          onError={() => setImgError(true)}
           style={{ width: '300px', height: '400px', objectFit: 'cover', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', marginBottom: '2rem' }} 
         />
         <h1 style={{ margin: 0, fontSize: '2.5rem', textAlign: 'center', maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{book.title}</h1>

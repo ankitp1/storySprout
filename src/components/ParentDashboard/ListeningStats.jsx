@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import useStore from '../../store/useStore';
 import { getQuestionsForBook } from '../../lib/discussionQuestions';
 
@@ -7,6 +7,7 @@ export default function ListeningStats({ profileId }) {
   const ratingsMap = useStore(state => state.ratings[profileId]);
   const books = useStore(state => state.books);
   const discussionQuestions = useStore(state => state.discussionQuestions);
+  const [imgError, setImgError] = useState({});
   
   const listeningStats = listeningStatsMap || {};
   const ratings = ratingsMap || {};
@@ -40,12 +41,9 @@ export default function ListeningStats({ profileId }) {
                 borderRadius: '12px'
               }}>
                 <img 
-                  src={book.coverUrl} 
+                  src={imgError[book.id] ? `https://placehold.co/80x120/e2e8f0/475569?text=Cover` : book.coverUrl} 
                   alt={book.title} 
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = `https://placehold.co/80x120/e2e8f0/475569?text=Cover`;
-                  }}
+                  onError={() => setImgError(prev => ({ ...prev, [book.id]: true }))}
                   style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} 
                 />
                 
