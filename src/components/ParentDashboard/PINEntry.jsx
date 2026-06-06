@@ -7,7 +7,7 @@ export default function PINEntry({ onSuccess, isModal, onCancel }) {
   const [error, setError] = useState(false);
   const navigate = useNavigate();
   
-  const CORRECT_PIN = '1234'; // In a real app, this would be env var or user set
+  const CORRECT_PIN = '6556'; // In a real app, this would be env var or user set
 
   const handleKeyPress = (num) => {
     setError(false);
