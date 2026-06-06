@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
 import { Play, Settings, Users, Eye, Search, Filter } from 'lucide-react';
+import PINEntry from '../../components/ParentDashboard/PINEntry';
 const formatTime = (timeInSeconds) => {
   if (!timeInSeconds) return '0:00';
   const m = Math.floor(timeInSeconds / 60);
@@ -9,9 +10,9 @@ const formatTime = (timeInSeconds) => {
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 };
 
-const BookCard = ({ book, progress, readBooks, navigate, isGrid = false, ratings }) => (
+const BookCard = ({ book, progress, readBooks, onBookClick, isGrid = false, ratings }) => (
   <div 
-    onClick={() => navigate(`/read/${book.id}`)}
+    onClick={() => onBookClick(book)}
     style={{
       background: 'var(--surface-color)',
       borderRadius: 'var(--radius-lg)',
@@ -118,6 +119,8 @@ export default function Library() {
   const readBooks = useStore(state => state.readBooks[state.activeProfileId] || []);
   const ratings = useStore(state => state.ratings?.[state.activeProfileId] || {});
   const listeningStats = useStore(state => state.listeningStats[state.activeProfileId] || {});
+  const approvedBooks = useStore(state => state.approvedBooks[state.activeProfileId] || []);
+  const approveBook = useStore(state => state.approveBook);
   const isHighContrast = useStore(state => state.isHighContrast);
   const toggleHighContrast = useStore(state => state.toggleHighContrast);
   const navigate = useNavigate();
@@ -128,6 +131,21 @@ export default function Library() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All'); // 'All', 'Completed', 'Favorites', 'Series'
   const [sortBy, setSortBy] = useState('Title'); // 'Title', 'Last Played'
+
+  // PIN Gate State
+  const [pendingApprovalBook, setPendingApprovalBook] = useState(null);
+
+  const handleBookClick = (book) => {
+    const hasProgress = progress[book.id] && progress[book.id].currentTime > 0;
+    const isFinished = readBooks.includes(book.id);
+    const isExplicitlyApproved = approvedBooks.includes(book.id);
+
+    if (hasProgress || isFinished || isExplicitlyApproved) {
+      navigate(`/read/${book.id}`);
+    } else {
+      setPendingApprovalBook(book);
+    }
+  };
 
   const handleAdminClick = () => {
     navigate('/admin/login');
@@ -312,7 +330,7 @@ export default function Library() {
                   gap: '2.5rem'
                 }}>
                   {processedBooks.map(book => (
-                    <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} ratings={ratings} navigate={navigate} isGrid={true} />
+                    <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} ratings={ratings} onBookClick={handleBookClick} isGrid={true} />
                   ))}
                 </div>
               )}
@@ -333,7 +351,7 @@ export default function Library() {
                   }}>
                     {seriesBooks.map(book => (
                       <div key={book.id} style={{ scrollSnapAlign: 'start' }}>
-                        <BookCard book={book} progress={progress} readBooks={readBooks} ratings={ratings} navigate={navigate} />
+                        <BookCard book={book} progress={progress} readBooks={readBooks} ratings={ratings} onBookClick={handleBookClick} />
                       </div>
                     ))}
                   </div>
@@ -349,7 +367,7 @@ export default function Library() {
                     gap: '2.5rem'
                   }}>
                     {standaloneBooks.map(book => (
-                      <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} ratings={ratings} navigate={navigate} isGrid={true} />
+                      <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} ratings={ratings} onBookClick={handleBookClick} isGrid={true} />
                     ))}
                   </div>
                 </div>
@@ -357,6 +375,25 @@ export default function Library() {
             </>
           )}
 
+        </div>
+      )}
+
+      {/* PIN Gate Modal */}
+      {pendingApprovalBook && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.8)',
+          zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <PINEntry 
+            isModal={true}
+            onCancel={() => setPendingApprovalBook(null)}
+            onSuccess={() => {
+              approveBook(pendingApprovalBook.id);
+              navigate(`/read/${pendingApprovalBook.id}`);
+            }} 
+          />
         </div>
       )}
     </div>

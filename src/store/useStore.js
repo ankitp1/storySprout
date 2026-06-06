@@ -93,6 +93,21 @@ const useStore = create(
         };
       }),
 
+      // Parental Approvals (scoped by profile)
+      approvedBooks: {},
+      approveBook: (bookId) => set((state) => {
+        if (!state.activeProfileId) return state;
+        const profileApproved = state.approvedBooks[state.activeProfileId] || [];
+        if (profileApproved.includes(bookId)) return state;
+        
+        return {
+          approvedBooks: {
+            ...state.approvedBooks,
+            [state.activeProfileId]: [...profileApproved, bookId]
+          }
+        };
+      }),
+
       // Analytics & Discussion
       // Analytics & Discussion (scoped by profile)
       listeningStats: {},
@@ -186,6 +201,11 @@ const useStore = create(
             // Migrate ratings if any exist
             ratings: {
               [defaultProfileId]: persistedState.ratings || {}
+            },
+
+            // Ensure approvedBooks exists
+            approvedBooks: {
+              [defaultProfileId]: []
             }
           };
         }

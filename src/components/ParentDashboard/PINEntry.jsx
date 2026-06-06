@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Lock, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export default function PINEntry({ onSuccess }) {
+export default function PINEntry({ onSuccess, isModal, onCancel }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
   const navigate = useNavigate();
@@ -33,30 +33,42 @@ export default function PINEntry({ onSuccess }) {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: isModal ? 'auto' : '100vh',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'var(--bg-color)'
+      background: isModal ? 'transparent' : 'var(--bg-color)',
+      padding: isModal ? '0' : '2rem'
     }}>
-      <div style={{ position: 'absolute', top: '2rem', left: '2rem' }}>
-        <button className="btn-icon" onClick={() => navigate('/')}>
-          <ArrowLeft size={32} />
-        </button>
-      </div>
+      {!isModal && (
+        <div style={{ position: 'absolute', top: '2rem', left: '2rem' }}>
+          <button className="btn-icon" onClick={() => navigate('/')}>
+            <ArrowLeft size={32} />
+          </button>
+        </div>
+      )}
 
       <div style={{
         background: 'var(--surface-color)',
         padding: '3rem',
         borderRadius: '24px',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+        boxShadow: isModal ? 'none' : '0 20px 40px rgba(0,0,0,0.1)',
         textAlign: 'center',
         maxWidth: '400px',
-        width: '100%'
+        width: '100%',
+        position: 'relative'
       }}>
+        {isModal && onCancel && (
+          <button 
+            onClick={onCancel}
+            style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}
+          >
+            ×
+          </button>
+        )}
         <Lock size={48} color="var(--primary)" style={{ marginBottom: '1rem' }} />
-        <h2 style={{ margin: '0 0 2rem 0' }}>Parent Dashboard</h2>
+        <h2 style={{ margin: '0 0 2rem 0' }}>{isModal ? 'Parental Approval Required' : 'Parent Dashboard'}</h2>
         
         <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2rem' }}>
           {[...Array(4)].map((_, i) => (
