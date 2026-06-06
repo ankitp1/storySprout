@@ -9,6 +9,18 @@ export default function ProfileSelection() {
   const navigate = useNavigate();
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
+  const [selectedAvatar, setSelectedAvatar] = useState('🦊');
+
+  const AVATARS = [
+    { emoji: '🦊', color: '#FF6B6B' },
+    { emoji: '🦄', color: '#4ECDC4' },
+    { emoji: '🦖', color: '#45B7D1' },
+    { emoji: '🚀', color: '#96CEB4' },
+    { emoji: '🌟', color: '#FFEEAD' },
+    { emoji: '🐼', color: '#D4A5A5' },
+    { emoji: '🐯', color: '#FFD93D' },
+    { emoji: '🐙', color: '#FF847C' }
+  ];
 
   const handleSelect = (profileId) => {
     setActiveProfile(profileId);
@@ -18,10 +30,10 @@ export default function ProfileSelection() {
   const handleAdd = (e) => {
     e.preventDefault();
     if (newName.trim()) {
-      const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#D4A5A5'];
-      const randomColor = colors[Math.floor(Math.random() * colors.length)];
-      addProfile(newName.trim(), randomColor);
+      const avatarData = AVATARS.find(a => a.emoji === selectedAvatar) || AVATARS[0];
+      addProfile(newName.trim(), avatarData.emoji, avatarData.color);
       setNewName('');
+      setSelectedAvatar('🦊');
       setIsAdding(false);
     }
   };
@@ -34,7 +46,7 @@ export default function ProfileSelection() {
         {profiles.map(profile => (
           <div key={profile.id} className="profile-card" onClick={() => handleSelect(profile.id)}>
             <div className="profile-avatar" style={{ backgroundColor: profile.color }}>
-              {profile.name.charAt(0).toUpperCase()}
+              {profile.avatar || profile.name.charAt(0).toUpperCase()}
             </div>
             <p className="profile-name">{profile.name}</p>
           </div>
@@ -61,7 +73,25 @@ export default function ProfileSelection() {
                 onChange={(e) => setNewName(e.target.value)}
                 maxLength={15}
               />
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              
+              <div style={{ marginTop: '1.5rem' }}>
+                <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-muted)' }}>Pick an Avatar:</p>
+                <div className="avatar-grid">
+                  {AVATARS.map((a) => (
+                    <button
+                      key={a.emoji}
+                      type="button"
+                      className={`avatar-btn ${selectedAvatar === a.emoji ? 'selected' : ''}`}
+                      style={{ backgroundColor: a.color }}
+                      onClick={() => setSelectedAvatar(a.emoji)}
+                    >
+                      {a.emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
                 <button type="button" className="btn-secondary" onClick={() => setIsAdding(false)}>Cancel</button>
                 <button type="submit" className="btn-primary" disabled={!newName.trim()}>Save</button>
               </div>

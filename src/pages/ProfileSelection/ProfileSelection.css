@@ -121,6 +121,35 @@
   border-color: var(--primary);
 }
 
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.avatar-btn {
+  font-size: 2rem;
+  border: 4px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: transform 0.2s, border-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-btn:hover {
+  transform: scale(1.1);
+}
+
+.avatar-btn.selected {
+  border-color: var(--text-main);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }

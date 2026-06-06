@@ -19,8 +19,8 @@ const useStore = create(
       profiles: [],
       activeProfileId: null,
       
-      addProfile: (name, color) => set((state) => ({
-        profiles: [...state.profiles, { id: Date.now().toString(), name, color }]
+      addProfile: (name, avatar, color) => set((state) => ({
+        profiles: [...state.profiles, { id: Date.now().toString(), name, avatar, color }]
       })),
       
       setActiveProfile: (profileId) => set({ activeProfileId: profileId }),
@@ -141,7 +141,7 @@ const useStore = create(
           
           return {
             ...persistedState,
-            profiles: [{ id: defaultProfileId, name: 'Rowan', color: '#FF6B6B' }],
+            profiles: [{ id: defaultProfileId, name: 'Rowan', avatar: '🦊', color: '#FF6B6B' }],
             activeProfileId: defaultProfileId,
             
             // Scope existing progress
