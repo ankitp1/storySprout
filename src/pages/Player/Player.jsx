@@ -17,6 +17,7 @@ export default function Player() {
   const markBookAsRead = useStore(state => state.markBookAsRead);
   const updateListeningStats = useStore(state => state.updateListeningStats);
   const incrementSessionCount = useStore(state => state.incrementSessionCount);
+  const addPoints = useStore(state => state.addPoints);
 
   // Audio State
   const [chapterIndex, setChapterIndex] = useState(progress.chapterIndex || 0);
@@ -26,6 +27,7 @@ export default function Player() {
   const [sleepTimerRemaining, setSleepTimerRemaining] = useState(null);
   const [showSleepTimerMenu, setShowSleepTimerMenu] = useState(false);
   const [hasAppliedSmartResume, setHasAppliedSmartResume] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
   
   const audioRef = useRef(null);
   const timerIntervalRef = useRef(null);
@@ -195,16 +197,35 @@ export default function Player() {
         </button>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '2rem', marginTop: '-80px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '2rem', marginTop: '-80px', position: 'relative' }}>
+        {toastMsg && (
+          <div style={{
+            position: 'absolute', top: '10%',
+            background: 'var(--primary)', color: 'white', padding: '0.75rem 1.5rem',
+            borderRadius: '24px', fontSize: '1.5rem', fontWeight: 'bold',
+            boxShadow: '0 10px 20px rgba(255, 107, 107, 0.3)',
+            animation: 'slideUpFade 3s ease-out forwards',
+            zIndex: 100
+          }}>
+            {toastMsg}
+          </div>
+        )}
         <img src={book.coverUrl} alt={book.title} style={{ width: '300px', height: '400px', objectFit: 'cover', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', marginBottom: '2rem' }} />
         <h1 style={{ margin: 0, fontSize: '2.5rem', textAlign: 'center', maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{book.title}</h1>
         <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>{currentChapter?.name || `Chapter ${chapterIndex + 1}`}</p>
       </div>
 
       <audio ref={audioRef} src={currentChapter?.url} onTimeUpdate={handleTimeUpdate} onEnded={() => {
+        // Award points for finishing a chapter!
+        addPoints(10);
+        setToastMsg('+10 Points! 🌱');
+        setTimeout(() => setToastMsg(''), 3000);
+
         if (chapterIndex < chapters.length - 1) {
           nextChapter();
         } else {
+          // Bonus points for finishing the book!
+          addPoints(50);
           setIsPlaying(false);
           markBookAsRead(bookId);
           navigate(`/book-celebration/${bookId}`);

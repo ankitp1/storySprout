@@ -25,6 +25,10 @@ const useStore = create(
       
       setActiveProfile: (profileId) => set({ activeProfileId: profileId }),
       
+      updateProfile: (profileId, updates) => set((state) => ({
+        profiles: state.profiles.map(p => p.id === profileId ? { ...p, ...updates } : p)
+      })),
+      
       removeProfile: (profileId) => set((state) => {
         // Need to clean up scoped data for this profile if we wanted, but keeping it simple for now
         return {
@@ -104,6 +108,40 @@ const useStore = create(
           approvedBooks: {
             ...state.approvedBooks,
             [state.activeProfileId]: [...profileApproved, bookId]
+          }
+        };
+      }),
+
+      // Gamification
+      points: {},
+      addPoints: (amount) => set((state) => {
+        if (!state.activeProfileId) return state;
+        const currentPoints = state.points[state.activeProfileId] || 0;
+        return {
+          points: {
+            ...state.points,
+            [state.activeProfileId]: currentPoints + amount
+          }
+        };
+      }),
+
+      unlockedAvatars: {},
+      unlockAvatar: (avatarUrl, cost) => set((state) => {
+        if (!state.activeProfileId) return state;
+        const currentPoints = state.points[state.activeProfileId] || 0;
+        if (currentPoints < cost) return state; // Insufficient points
+        
+        const unlocked = state.unlockedAvatars[state.activeProfileId] || [];
+        if (unlocked.includes(avatarUrl)) return state; // Already unlocked
+
+        return {
+          points: {
+            ...state.points,
+            [state.activeProfileId]: currentPoints - cost
+          },
+          unlockedAvatars: {
+            ...state.unlockedAvatars,
+            [state.activeProfileId]: [...unlocked, avatarUrl]
           }
         };
       }),
@@ -205,7 +243,17 @@ const useStore = create(
 
             // Ensure approvedBooks exists
             approvedBooks: {
-              [defaultProfileId]: []
+              [defaultProfileId]: persistedState.approvedBooks?.[defaultProfileId] || []
+            },
+
+            // Ensure points exists
+            points: {
+              [defaultProfileId]: persistedState.points?.[defaultProfileId] || 0
+            },
+
+            // Ensure unlockedAvatars exists
+            unlockedAvatars: {
+              [defaultProfileId]: persistedState.unlockedAvatars?.[defaultProfileId] || []
             }
           };
         }

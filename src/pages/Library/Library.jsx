@@ -1,8 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import { Play, Settings, Users, Eye, Search, Filter } from 'lucide-react';
+import { Play, Settings, Users, Eye, Search, Filter, Lock, Unlock } from 'lucide-react';
 import PINEntry from '../../components/ParentDashboard/PINEntry';
+
+const PREMIUM_AVATARS = [
+  { emoji: '👑', color: '#FFD700', cost: 100, name: 'King' },
+  { emoji: '🤖', color: '#9E9E9E', cost: 100, name: 'Robot' },
+  { emoji: '🐉', color: '#4CAF50', cost: 100, name: 'Dragon' },
+  { emoji: '👸', color: '#E91E63', cost: 100, name: 'Princess' },
+  { emoji: '🧙‍♂️', color: '#673AB7', cost: 100, name: 'Wizard' },
+  { emoji: '👽', color: '#00BCD4', cost: 100, name: 'Alien' },
+  { emoji: '🦁', color: '#FF9800', cost: 200, name: 'Lion' },
+  { emoji: '🦄', color: '#FF4081', cost: 200, name: 'Unicorn' }
+];
 const formatTime = (timeInSeconds) => {
   if (!timeInSeconds) return '0:00';
   const m = Math.floor(timeInSeconds / 60);
@@ -120,7 +131,12 @@ export default function Library() {
   const ratings = useStore(state => state.ratings?.[state.activeProfileId] || {});
   const listeningStats = useStore(state => state.listeningStats[state.activeProfileId] || {});
   const approvedBooks = useStore(state => state.approvedBooks[state.activeProfileId] || []);
+  const points = useStore(state => state.points[state.activeProfileId] || 0);
+  const unlockedAvatars = useStore(state => state.unlockedAvatars[state.activeProfileId] || []);
+  
   const approveBook = useStore(state => state.approveBook);
+  const unlockAvatar = useStore(state => state.unlockAvatar);
+  const updateProfile = useStore(state => state.updateProfile);
   const isHighContrast = useStore(state => state.isHighContrast);
   const toggleHighContrast = useStore(state => state.toggleHighContrast);
   const navigate = useNavigate();
@@ -134,6 +150,9 @@ export default function Library() {
 
   // PIN Gate State
   const [pendingApprovalBook, setPendingApprovalBook] = useState(null);
+
+  // Avatar Shop State
+  const [isShopOpen, setIsShopOpen] = useState(false);
 
   const handleBookClick = (book) => {
     const hasProgress = progress[book.id] && progress[book.id].currentTime > 0;
@@ -199,12 +218,43 @@ export default function Library() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
         <div>
-          <h1 style={{ fontSize: '3rem', color: 'var(--primary)', textShadow: '2px 2px 0px rgba(0,0,0,0.1)', margin: 0 }}>
+          <h1 style={{ fontSize: '3rem', color: 'var(--primary)', textShadow: '2px 2px 0px rgba(0,0,0,0.1)', margin: 0, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {activeProfile && (
+              <div 
+                style={{ width: '60px', height: '60px', borderRadius: '50%', background: activeProfile.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}
+              >
+                {activeProfile.avatar}
+              </div>
+            )}
             {activeProfile ? `${activeProfile.name}'s Library` : 'StorySprout 🌱'}
           </h1>
         </div>
         
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          {/* Points Display / Shop Trigger */}
+          {activeProfile && (
+            <button 
+              onClick={() => setIsShopOpen(true)}
+              style={{
+                background: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                padding: '0.5rem 1rem',
+                borderRadius: '24px',
+                fontSize: '1.2rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                boxShadow: '0 4px 12px rgba(255, 107, 107, 0.3)'
+              }}
+              title="Avatar Shop"
+            >
+              🌱 {points} Pts
+            </button>
+          )}
+
           {/* High Contrast Button */}
           <button 
             className="btn-icon" 
@@ -394,6 +444,94 @@ export default function Library() {
               navigate(`/read/${pendingApprovalBook.id}`);
             }} 
           />
+        </div>
+      )}
+
+      {/* Avatar Shop Modal */}
+      {isShopOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.8)',
+          zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'var(--surface-color)',
+            padding: '2rem',
+            borderRadius: '24px',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            position: 'relative'
+          }}>
+            <button 
+              onClick={() => setIsShopOpen(false)}
+              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}
+            >
+              ×
+            </button>
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <h2 style={{ fontSize: '2.5rem', margin: '0 0 0.5rem 0' }}>Avatar Shop 🛍️</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem', margin: 0 }}>You have <strong style={{ color: 'var(--primary)' }}>🌱 {points} Points</strong></p>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+              gap: '1.5rem'
+            }}>
+              {PREMIUM_AVATARS.map(avatar => {
+                const isUnlocked = unlockedAvatars.includes(avatar.emoji);
+                const isEquipped = activeProfile?.avatar === avatar.emoji;
+                const canAfford = points >= avatar.cost;
+
+                return (
+                  <div key={avatar.emoji} style={{
+                    background: 'var(--bg-color)',
+                    borderRadius: '16px',
+                    padding: '1rem',
+                    textAlign: 'center',
+                    border: isEquipped ? `3px solid ${avatar.color}` : '3px solid transparent',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center'
+                  }}>
+                    <div style={{
+                      width: '60px', height: '60px', borderRadius: '50%',
+                      background: avatar.color, fontSize: '2rem',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      marginBottom: '1rem',
+                      opacity: isUnlocked || canAfford ? 1 : 0.5
+                    }}>
+                      {avatar.emoji}
+                    </div>
+                    
+                    {isUnlocked ? (
+                      <button 
+                        className="btn-secondary"
+                        style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem', background: isEquipped ? 'var(--primary)' : 'var(--surface-color)', color: isEquipped ? 'white' : 'var(--text-main)' }}
+                        onClick={() => updateProfile(activeProfileId, { avatar: avatar.emoji, color: avatar.color })}
+                      >
+                        {isEquipped ? 'Equipped' : 'Equip'}
+                      </button>
+                    ) : (
+                      <button 
+                        className="btn-primary"
+                        disabled={!canAfford}
+                        style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                        onClick={() => {
+                          unlockAvatar(avatar.emoji, avatar.cost);
+                        }}
+                      >
+                        {canAfford ? <Unlock size={14} /> : <Lock size={14} />}
+                        {avatar.cost} Pts
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>
