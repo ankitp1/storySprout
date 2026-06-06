@@ -20,3 +20,29 @@ export const fetchBookCover = async (bookTitle) => {
     return null;
   }
 };
+
+export const fetchBookDetails = async (bookTitle) => {
+  try {
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(bookTitle)}`);
+    if (!res.ok) return null;
+    
+    const data = await res.json();
+    if (data.items && data.items.length > 0) {
+      // Find the first result that has a description
+      for (const item of data.items) {
+        if (item.volumeInfo && item.volumeInfo.description) {
+          return {
+            description: item.volumeInfo.description,
+            pageCount: item.volumeInfo.pageCount,
+            publishedDate: item.volumeInfo.publishedDate,
+            authors: item.volumeInfo.authors
+          };
+        }
+      }
+    }
+    return null;
+  } catch (err) {
+    console.error('Failed to fetch book details:', err);
+    return null;
+  }
+};
