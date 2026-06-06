@@ -3,9 +3,7 @@ import localforage from 'localforage';
 const CACHE_KEY = 'storysprout_discussion_questions';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-export async function loadDiscussionQuestions(sheetId) {
-  if (!sheetId) return [];
-
+export async function loadDiscussionQuestions() {
   // Check cache
   try {
     const cached = await localforage.getItem(CACHE_KEY);
@@ -18,7 +16,7 @@ export async function loadDiscussionQuestions(sheetId) {
   }
 
   // Fetch from Google Sheets CSV export
-  const SHEET_URL = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+  const SHEET_URL = `https://docs.google.com/spreadsheets/d/e/2PACX-1vSYvZc2rfWcIf2S9pDgyYCUgB3y1ioMW8A_jXAhwQDwQa3W_MwUY1_eoEODMes6u0CKBkS4wh-OgQBp/pub?output=csv`;
   
   try {
     const response = await fetch(SHEET_URL);

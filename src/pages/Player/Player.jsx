@@ -171,7 +171,7 @@ export default function Player() {
           } else {
             setIsPlaying(false);
             markBookAsRead(bookId);
-            // Optionally navigate back or show a "Done!" celebration
+            navigate(`/book-celebration/${bookId}`);
           }
         }}
       />

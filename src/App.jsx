@@ -4,11 +4,13 @@ import useStore from './store/useStore';
 import { fetchBooksFromDrive } from './services/googleDrive';
 import { fetchBookCover } from './services/googleBooks';
 import { getDriveCache, setDriveCache } from './lib/driveCache';
+import { loadDiscussionQuestions } from './lib/discussionQuestions';
 
 // Pages
 import Library from './pages/Library/Library';
 import Player from './pages/Player/Player';
 import AdminLogin from './pages/Admin/Login';
+import BookCelebration from './pages/BookCelebration/BookCelebration';
 import AdminDashboard from './pages/Admin/Dashboard';
 
 // Protected Route Component for Admin
@@ -18,8 +20,16 @@ const AdminRoute = ({ children }) => {
 };
 
 function App() {
-  const books = useStore((state) => state.books);
-  const addBook = useStore((state) => state.addBook);
+  const { books, addBook, setDiscussionQuestions } = useStore();
+
+  React.useEffect(() => {
+    const initData = async () => {
+      const questions = await loadDiscussionQuestions();
+      setDiscussionQuestions(questions);
+    };
+    initData();
+  }, [setDiscussionQuestions]);
+
   const removeBook = useStore((state) => state.removeBook);
 
   React.useEffect(() => {
@@ -62,6 +72,7 @@ function App() {
           {/* Kid Mode */}
           <Route path="/" element={<Library />} />
           <Route path="/read/:bookId" element={<Player />} />
+          <Route path="/book-celebration/:bookId" element={<BookCelebration />} />
           
           {/* Admin Mode */}
           <Route path="/admin/login" element={<AdminLogin />} />
