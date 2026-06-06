@@ -264,7 +264,6 @@ export default function Player() {
         </div>
 
         <div className="player-controls-container">
-          <div className="player-controls-grid">
             <button 
               onClick={rewind15}
               className="btn-icon player-btn-secondary" 
@@ -302,7 +301,6 @@ export default function Player() {
 
             {/* Placeholder to balance the rewind button */}
             <div className="player-btn-placeholder"></div>
-          </div>
         </div>
       </div>
     </div>
