@@ -79,17 +79,19 @@ function App() {
   return (
     <Router>
       <div className="app-container">
-        <Routes>
-          <Route path="/profiles" element={<ProfileSelection />} />
-          
-          {/* Kid Mode */}
-          <Route path="/" element={<ProtectedProfileRoute><Library /></ProtectedProfileRoute>} />
-          <Route path="/read/:bookId" element={<ProtectedProfileRoute><Player /></ProtectedProfileRoute>} />
-          <Route path="/book-celebration/:bookId" element={<ProtectedProfileRoute><BookCelebration /></ProtectedProfileRoute>} />
-          
-          {/* Admin Mode */}
-          <Route path="/admin" element={<AdminDashboard />} />
-        </Routes>
+        <div className="app-main">
+          <Routes>
+            <Route path="/profiles" element={<ProfileSelection />} />
+            
+            {/* Kid Mode */}
+            <Route path="/" element={<ProtectedProfileRoute><Library /></ProtectedProfileRoute>} />
+            <Route path="/read/:bookId" element={<ProtectedProfileRoute><Player /></ProtectedProfileRoute>} />
+            <Route path="/book-celebration/:bookId" element={<ProtectedProfileRoute><BookCelebration /></ProtectedProfileRoute>} />
+            
+            {/* Admin Mode */}
+            <Route path="/admin" element={<AdminDashboard />} />
+          </Routes>
+        </div>
       </div>
     </Router>
   );
