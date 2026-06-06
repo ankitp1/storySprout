@@ -6,7 +6,7 @@ export const extractFolderId = (link) => {
 
 const fetchFolderContents = async (folderId, apiKey) => {
   const res = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+(mimeType='application/vnd.google-apps.folder'+or+mimeType+contains+'audio/'+or+mimeType+contains+'image/')+and+trashed=false&key=${apiKey}&fields=files(id,name,mimeType,webContentLink)&orderBy=name`
+    `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+(mimeType='application/vnd.google-apps.folder'+or+mimeType+contains+'audio/'+or+mimeType+contains+'image/')+and+trashed=false&key=${apiKey}&fields=files(id,name,mimeType,webContentLink,thumbnailLink)&orderBy=name`
   );
   if (!res.ok) {
     throw new Error(`Failed to fetch folder contents for ${folderId}`);
@@ -26,7 +26,14 @@ const buildBookObj = (folderItem, contents, apiKey, seriesName) => {
   let hasCustomCover = false;
   
   if (contents.imageFiles.length > 0) {
-    coverUrl = `https://www.googleapis.com/drive/v3/files/${contents.imageFiles[0].id}?alt=media&key=${apiKey}`;
+    const img = contents.imageFiles[0];
+    if (img.thumbnailLink) {
+      coverUrl = img.thumbnailLink.replace(/=s\d+/, '=s800');
+    } else if (img.webContentLink) {
+      coverUrl = img.webContentLink;
+    } else {
+      coverUrl = `https://www.googleapis.com/drive/v3/files/${img.id}?alt=media&key=${apiKey}`;
+    }
     hasCustomCover = true;
   }
 
