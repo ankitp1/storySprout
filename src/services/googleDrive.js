@@ -46,7 +46,7 @@ const buildBookObj = (folderItem, contents, apiKey, seriesName) => {
     chapters: contents.audioFiles.map(file => ({
       id: file.id,
       name: file.name,
-      url: `https://drive.google.com/uc?export=download&id=${file.id}&confirm=t`,
+      url: `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}&acknowledgeAbuse=true`,
     }))
   };
 };
