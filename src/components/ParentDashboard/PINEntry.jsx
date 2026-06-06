@@ -97,7 +97,8 @@ export default function PINEntry({ onSuccess, isModal, onCancel }) {
                 fontSize: '1.5rem',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                margin: '0 auto'
+                margin: '0 auto',
+                color: 'var(--text-main)'
               }}
             >
               {num}
@@ -114,7 +115,8 @@ export default function PINEntry({ onSuccess, isModal, onCancel }) {
               fontSize: '1.5rem',
               fontWeight: 'bold',
               cursor: 'pointer',
-              margin: '0 auto'
+              margin: '0 auto',
+              color: 'var(--text-main)'
             }}
           >
             0
