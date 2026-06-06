@@ -83,7 +83,7 @@ export default function Dashboard() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
         <div>
           <h1 style={{ margin: 0, textAlign: 'left' }}>Parent Dashboard</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Manage Rowan's library here</p>
+          <p style={{ color: 'var(--text-muted)' }}>Manage your StorySprout library here</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button 

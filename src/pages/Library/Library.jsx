@@ -235,11 +235,13 @@ export default function Library() {
             {activeProfile && (
               <div 
                 style={{ width: '60px', height: '60px', borderRadius: '50%', background: activeProfile.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}
+                title={`${activeProfile.name}'s Profile`}
               >
                 {activeProfile.avatar}
               </div>
             )}
-            {activeProfile ? `${activeProfile.name}'s Library` : 'StorySprout 🌱'}
+            StorySprout 🌱
+            {activeProfile && <span style={{ fontSize: '1.2rem', marginLeft: '0.5rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>({activeProfile.name}'s Library)</span>}
           </h1>
         </div>
         
