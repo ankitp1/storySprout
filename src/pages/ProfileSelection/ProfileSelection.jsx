@@ -11,6 +11,8 @@ export default function ProfileSelection() {
   const [newName, setNewName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('🦊');
   const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [confirmPinError, setConfirmPinError] = useState(false);
 
   // PIN Gate State
   const [pinGateProfileId, setPinGateProfileId] = useState(null);
@@ -43,13 +45,29 @@ export default function ProfileSelection() {
   const handleAdd = (e) => {
     e.preventDefault();
     if (newName.trim()) {
+      if (newPin && newPin !== confirmPin) {
+        setConfirmPinError(true);
+        return;
+      }
       const avatarData = AVATARS.find(a => a.emoji === selectedAvatar) || AVATARS[0];
       addProfile(newName.trim(), avatarData.emoji, avatarData.color, newPin);
       setNewName('');
       setSelectedAvatar('🦊');
       setNewPin('');
+      setConfirmPin('');
+      setConfirmPinError(false);
       setIsAdding(false);
     }
+  };
+
+  const handlePinChange = (val) => {
+    setNewPin(val);
+    setConfirmPinError(false);
+  };
+
+  const handleConfirmPinChange = (val) => {
+    setConfirmPin(val);
+    setConfirmPinError(false);
   };
 
   const handleKeypadPress = (val) => {
@@ -275,7 +293,7 @@ export default function ProfileSelection() {
       {/* Add Profile Modal */}
       {isAdding && (
         <div className="add-profile-modal">
-          <div className="add-profile-content">
+          <div className="add-profile-content" style={{ maxWidth: '440px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ margin: 0 }}>Add New Profile</h2>
               <button 
@@ -283,6 +301,8 @@ export default function ProfileSelection() {
                 onClick={() => {
                   setIsAdding(false);
                   setNewPin('');
+                  setConfirmPin('');
+                  setConfirmPinError(false);
                 }}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
               >
@@ -317,16 +337,18 @@ export default function ProfileSelection() {
                 </div>
               </div>
 
-              <div style={{ marginTop: '1.5rem' }}>
+              <div style={{ marginTop: '1.5rem', background: 'rgba(255,107,107,0.05)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
                 <p style={{ margin: '0 0 0.25rem 0', color: 'var(--text-muted)', fontWeight: 'bold' }}>Set 4-Digit Profile PIN (Optional):</p>
-                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Leave blank for no PIN protection</p>
+                <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: '1.3' }}>
+                  🔑 **Why set a PIN?** Since profiles sync across all family devices in the cloud, a PIN keeps other kids from accidentally opening this profile and changing books, progress, or points!
+                </p>
                 <input
-                  type="password"
+                  type="text"
                   pattern="[0-9]*"
                   inputMode="numeric"
                   placeholder="e.g. 1234"
                   value={newPin}
-                  onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  onChange={(e) => handlePinChange(e.target.value.replace(/\D/g, '').slice(0, 4))}
                   style={{
                     padding: '0.75rem',
                     borderRadius: '12px',
@@ -338,14 +360,45 @@ export default function ProfileSelection() {
                     boxSizing: 'border-box'
                   }}
                 />
+
+                {newPin.length > 0 && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-muted)', fontWeight: 'bold' }}>Confirm Profile PIN:</p>
+                    <input
+                      type="text"
+                      pattern="[0-9]*"
+                      inputMode="numeric"
+                      placeholder="e.g. 1234"
+                      value={confirmPin}
+                      onChange={(e) => handleConfirmPinChange(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      style={{
+                        padding: '0.75rem',
+                        borderRadius: '12px',
+                        border: confirmPinError ? '2px solid var(--primary)' : '2px solid var(--border)',
+                        width: '100%',
+                        fontSize: '1.2rem',
+                        textAlign: 'center',
+                        letterSpacing: '0.5rem',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {confirmPinError && (
+                      <p style={{ color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 'bold', margin: '0.5rem 0 0 0' }}>
+                        PINs do not match! Please verify.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
                 <button type="button" className="btn-secondary" onClick={() => {
                   setIsAdding(false);
                   setNewPin('');
+                  setConfirmPin('');
+                  setConfirmPinError(false);
                 }} style={{ flex: 1 }}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={!newName.trim()} style={{ flex: 1 }}>Save</button>
+                <button type="submit" className="btn-primary" disabled={!newName.trim() || (newPin && newPin.length !== 4)} style={{ flex: 1 }}>Save</button>
               </div>
             </form>
           </div>
