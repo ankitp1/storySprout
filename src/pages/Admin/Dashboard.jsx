@@ -79,13 +79,13 @@ export default function Dashboard() {
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
+    <div className="admin-container" style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
+      <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
         <div>
           <h1 style={{ margin: 0, textAlign: 'left' }}>Parent Dashboard</h1>
           <p style={{ color: 'var(--text-muted)' }}>Manage your StorySprout library here</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div className="admin-header-controls" style={{ display: 'flex', gap: '1rem' }}>
           <button 
             className="btn-secondary"
             onClick={syncLibrary}

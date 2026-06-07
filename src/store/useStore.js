@@ -204,60 +204,83 @@ const useStore = create(
       discussionQuestions: [],
       setDiscussionQuestions: (questions) => set({ discussionQuestions: questions }),
 
-      isHighContrast: false,
-      toggleHighContrast: () => set((state) => ({ isHighContrast: !state.isHighContrast })),
+      isDarkMode: false,
+      toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
+
+      completedTours: {},
+      completeTour: (profileId) => set((state) => ({
+        completedTours: {
+          ...state.completedTours,
+          [profileId]: true
+        }
+      })),
+      resetTour: (profileId) => set((state) => ({
+        completedTours: {
+          ...state.completedTours,
+          [profileId]: false
+        }
+      })),
     }),
     {
       name: 'rowans-library-storage', // name of the item in the storage (must be unique)
       storage: createJSONStorage(() => localforage),
-      version: 2, // Increment version for migration
+      version: 3, // Increment version for migration
       migrate: (persistedState, version) => {
+        let state = persistedState;
         if (version === 0 || version === 1 || version === undefined) {
           // Migration from global to profile-scoped
           const defaultProfileId = 'profile_default_rowan';
           
-          return {
-            ...persistedState,
+          state = {
+            ...state,
             profiles: [{ id: defaultProfileId, name: 'Rowan', avatar: '🦊', color: '#FF6B6B' }],
             activeProfileId: defaultProfileId,
             
             // Scope existing progress
             progress: {
-              [defaultProfileId]: persistedState.progress || {}
+              [defaultProfileId]: state.progress || {}
             },
             
             // Scope existing read books
             readBooks: {
-              [defaultProfileId]: persistedState.readBooks || []
+              [defaultProfileId]: state.readBooks || []
             },
             
             // Scope existing listening stats
             listeningStats: {
-              [defaultProfileId]: persistedState.listeningStats || {}
+              [defaultProfileId]: state.listeningStats || {}
             },
             
             // Migrate ratings if any exist
             ratings: {
-              [defaultProfileId]: persistedState.ratings || {}
+              [defaultProfileId]: state.ratings || {}
             },
 
             // Ensure approvedBooks exists
             approvedBooks: {
-              [defaultProfileId]: persistedState.approvedBooks?.[defaultProfileId] || []
+              [defaultProfileId]: state.approvedBooks?.[defaultProfileId] || []
             },
 
             // Ensure points exists
             points: {
-              [defaultProfileId]: persistedState.points?.[defaultProfileId] || 0
+              [defaultProfileId]: state.points?.[defaultProfileId] || 0
             },
 
             // Ensure unlockedAvatars exists
             unlockedAvatars: {
-              [defaultProfileId]: persistedState.unlockedAvatars?.[defaultProfileId] || []
+              [defaultProfileId]: state.unlockedAvatars?.[defaultProfileId] || []
             }
           };
         }
-        return persistedState;
+        if (version < 3) {
+          state = {
+            ...state,
+            isDarkMode: !!state.isHighContrast || !!state.isDarkMode,
+          };
+          delete state.isHighContrast;
+          delete state.theme;
+        }
+        return state;
       }
     }
   )

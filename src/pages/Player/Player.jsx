@@ -190,14 +190,14 @@ export default function Player() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-color)' }}>
-      <div style={{ padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', background: 'transparent', zIndex: 10 }}>
+    <div className="player-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-color)' }}>
+      <div className="player-header" style={{ padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', background: 'transparent', zIndex: 10 }}>
         <button onClick={() => navigate('/')} className="btn-icon" style={{ width: '64px', height: '64px', marginRight: '1.5rem', background: 'white', boxShadow: 'var(--shadow-md)' }}>
           <ArrowLeft size={32} />
         </button>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '2rem', marginTop: '-80px', position: 'relative' }}>
+      <div className="player-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '2rem', marginTop: '-80px', position: 'relative' }}>
         {toastMsg && (
           <div style={{
             position: 'absolute', top: '10%',
@@ -214,7 +214,8 @@ export default function Player() {
           src={imgError ? `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}` : book.coverUrl} 
           alt={book.title} 
           onError={() => setImgError(true)}
-          style={{ width: '300px', height: '400px', objectFit: 'cover', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', marginBottom: '2rem' }} 
+          className="player-cover"
+          style={{ width: '100%', maxWidth: '260px', aspectRatio: '3/4', objectFit: 'cover', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', marginBottom: '1.5rem' }} 
         />
         <h1 style={{ margin: 0, fontSize: '2.5rem', textAlign: 'center', maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{book.title}</h1>
         <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>{currentChapter?.name || `Chapter ${chapterIndex + 1}`}</p>

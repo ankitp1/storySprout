@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import { Play, Settings, Users, Eye, Search, Filter, Lock, Unlock } from 'lucide-react';
+import { Play, Settings, Users, Search, Lock, Unlock, HelpCircle, Sun, Moon } from 'lucide-react';
 import PINEntry from '../../components/ParentDashboard/PINEntry';
+import OnboardingTour from '../../components/OnboardingTour';
 
 const PREMIUM_AVATARS = [
   { emoji: '👑', color: '#FFD700', cost: 100, name: 'King' },
@@ -21,11 +22,13 @@ const formatTime = (timeInSeconds) => {
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 };
 
-const BookCard = ({ book, progress, readBooks, onBookClick, isGrid = false, ratings, ratio = '2/3' }) => {
+const BookCard = ({ book, progress, readBooks, onBookClick, isGrid = false, ratings, ratio = '2/3', dataTour }) => {
   const [imgError, setImgError] = useState(false);
   return (
     <div 
       onClick={() => onBookClick(book)}
+      data-tour={dataTour}
+      className="book-card"
       style={{
         background: 'var(--surface-color)',
         borderRadius: 'var(--radius-lg)',
@@ -149,10 +152,78 @@ export default function Library() {
   const approveBook = useStore(state => state.approveBook);
   const unlockAvatar = useStore(state => state.unlockAvatar);
   const updateProfile = useStore(state => state.updateProfile);
-  const isHighContrast = useStore(state => state.isHighContrast);
-  const toggleHighContrast = useStore(state => state.toggleHighContrast);
+  const isDarkMode = useStore(state => state.isDarkMode);
+  const toggleDarkMode = useStore(state => state.toggleDarkMode);
   const navigate = useNavigate();
   
+  const completedTours = useStore(state => state.completedTours || {});
+  const completeTour = useStore(state => state.completeTour);
+  const [isTourActive, setIsTourActive] = useState(false);
+
+  React.useEffect(() => {
+    if (activeProfileId && completedTours[activeProfileId] === undefined) {
+      const timer = setTimeout(() => {
+        setIsTourActive(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeProfileId, completedTours]);
+
+  const handleTourComplete = () => {
+    setIsTourActive(false);
+    if (activeProfileId) {
+      completeTour(activeProfileId);
+    }
+  };
+
+  const startTour = () => {
+    setIsTourActive(true);
+  };
+
+  const tourSteps = [
+    {
+      title: "Welcome to StorySprout! 🌱",
+      content: "StorySprout is a magical interactive audiobook player for kids. Let's take a quick 1-minute tour to find all the cool features!",
+      icon: "✨"
+    },
+    {
+      selector: '[data-tour="profile"]',
+      title: "Kid Profiles",
+      content: "This is your kid's profile! Multiple kids can share the app, each with their own character, progress tracking, and reward points.",
+      icon: "🦊"
+    },
+    {
+      selector: '[data-tour="shop"]',
+      title: "🌱 Earn Points & Avatar Shop",
+      content: "Listen to books to earn points! Tap this badge to spend points in the shop to unlock fun premium profile emojis.",
+      icon: "🛍️"
+    },
+    {
+      selector: '[data-tour="search"]',
+      title: "Search & Sort",
+      content: "Search books by title/author instantly, or sort your library by A-Z or what was last played.",
+      icon: "🔍"
+    },
+    {
+      selector: '[data-tour="filters"]',
+      title: "Quick Filters",
+      content: "Quickly filter to show only completed books, favorites (rated 3+ stars), or grouped series.",
+      icon: "⚡"
+    },
+    {
+      selector: '[data-tour="parent-zone"]',
+      title: "Parent Zone 🔐",
+      content: "Settings are protected by a secure 4-digit PIN. Tap this gear to sync new audiobooks, view detailed listening statistics, check reviews, and approve/restrict books.",
+      icon: "🛡️"
+    },
+    {
+      selector: '[data-tour="book-card"]',
+      title: "Let's Start Listening!",
+      content: "Tap any book to open the playful audio player. Features include smart resume, sleep timer, and kid-friendly discussion questions!",
+      icon: "🎧"
+    }
+  ];
+
   const activeProfile = profiles.find(p => p.id === activeProfileId);
 
   // Search & Filter State
@@ -227,13 +298,14 @@ export default function Library() {
   const isFiltering = searchQuery !== '' || activeFilter !== 'All' || sortBy !== 'Title';
 
   return (
-    <div style={{ padding: '2rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ padding: '2rem', flex: 1, display: 'flex', flexDirection: 'column' }} className="library-main-container">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
+      <div className="library-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
         <div>
           <h1 style={{ fontSize: '3rem', color: 'var(--primary)', textShadow: '2px 2px 0px rgba(0,0,0,0.1)', margin: 0, display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {activeProfile && (
               <div 
+                data-tour="profile"
                 style={{ width: '60px', height: '60px', borderRadius: '50%', background: activeProfile.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}
                 title={`${activeProfile.name}'s Profile`}
               >
@@ -245,11 +317,12 @@ export default function Library() {
           </h1>
         </div>
         
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div className="library-header-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           {/* Points Display / Shop Trigger */}
           {activeProfile && (
             <button 
               onClick={() => setIsShopOpen(true)}
+              data-tour="shop"
               style={{
                 background: 'var(--primary)',
                 color: 'var(--btn-text-color, white)',
@@ -270,17 +343,30 @@ export default function Library() {
             </button>
           )}
 
-          {/* High Contrast Button */}
+          {/* Theme Toggle Button */}
           <button 
             className="btn-icon" 
-            onClick={toggleHighContrast}
-            title="Toggle High Contrast Mode"
+            onClick={toggleDarkMode}
+            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
             style={{ 
-              background: isHighContrast ? 'var(--primary)' : 'white',
-              color: isHighContrast ? 'var(--btn-text-color, white)' : 'var(--text-main)'
+              background: 'white',
+              color: 'var(--text-main)'
             }}
           >
-            <Eye size={24} />
+            {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+          </button>
+          
+          {/* Help Tour Button */}
+          <button 
+            className="btn-icon" 
+            onClick={startTour}
+            title="Help Tour"
+            style={{ 
+              background: 'white',
+              color: 'var(--text-main)'
+            }}
+          >
+            <HelpCircle size={24} />
           </button>
           
           {/* Switch Profile Button */}
@@ -295,6 +381,7 @@ export default function Library() {
           {/* Admin Button */}
           <button 
             onClick={handleAdminClick}
+            data-tour="parent-zone"
             style={{ color: 'var(--text-muted)', opacity: 0.5, padding: '1rem', background: 'none', border: 'none', cursor: 'pointer' }}
             title="Admin"
           >
@@ -307,8 +394,8 @@ export default function Library() {
       <div style={{ marginBottom: '3rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         
         {/* Search & Sort Row */}
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: '250px' }}>
+        <div className="search-sort-row" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div data-tour="search" style={{ position: 'relative', flex: 1, minWidth: '250px' }}>
             <Search size={24} color="var(--text-muted)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
             <input 
               type="text" 
@@ -346,7 +433,7 @@ export default function Library() {
         </div>
 
         {/* Filter Pills Row */}
-        <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+        <div data-tour="filters" style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
           {['All', 'Completed', 'Favorites', 'Series'].map(filter => (
             <button
               key={filter}
@@ -389,13 +476,13 @@ export default function Library() {
               {processedBooks.length === 0 ? (
                 <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem' }}>No books found.</p>
               ) : (
-                <div style={{
+                <div className="book-grid" style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
                   gap: '2.5rem'
                 }}>
-                  {processedBooks.map(book => (
-                    <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} ratings={ratings} onBookClick={handleBookClick} isGrid={true} />
+                  {processedBooks.map((book, idx) => (
+                    <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} ratings={ratings} onBookClick={handleBookClick} isGrid={true} dataTour={idx === 0 ? "book-card" : undefined} />
                   ))}
                 </div>
               )}
@@ -414,9 +501,9 @@ export default function Library() {
                     paddingTop: '1rem',
                     scrollSnapType: 'x mandatory'
                   }}>
-                    {seriesBooks.map(book => (
+                    {seriesBooks.map((book, idx) => (
                       <div key={book.id} style={{ scrollSnapAlign: 'start' }}>
-                        <BookCard book={book} progress={progress} readBooks={readBooks} ratings={ratings} onBookClick={handleBookClick} />
+                        <BookCard book={book} progress={progress} readBooks={readBooks} ratings={ratings} onBookClick={handleBookClick} dataTour={idx === 0 ? "book-card" : undefined} />
                       </div>
                     ))}
                   </div>
@@ -426,13 +513,13 @@ export default function Library() {
               {standaloneBooks.length > 0 && (
                 <div>
                   <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem', color: 'var(--text-main)' }}>More Books</h2>
-                  <div style={{
+                  <div className="book-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
                     gap: '2.5rem'
                   }}>
-                    {standaloneBooks.map(book => (
-                      <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} ratings={ratings} onBookClick={handleBookClick} isGrid={true} />
+                    {standaloneBooks.map((book, idx) => (
+                      <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} ratings={ratings} onBookClick={handleBookClick} isGrid={true} dataTour={idx === 0 ? "book-card" : undefined} />
                     ))}
                   </div>
                 </div>
@@ -549,6 +636,13 @@ export default function Library() {
           </div>
         </div>
       )}
+
+      {/* Onboarding Tour */}
+      <OnboardingTour 
+        steps={tourSteps} 
+        active={isTourActive} 
+        onComplete={handleTourComplete} 
+      />
     </div>
   );
 }

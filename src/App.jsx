@@ -23,15 +23,15 @@ const ProtectedProfileRoute = ({ children }) => {
 
 function App() {
   const { books, addBook, setDiscussionQuestions } = useStore();
-  const isHighContrast = useStore(state => state.isHighContrast);
+  const isDarkMode = useStore(state => state.isDarkMode);
 
   React.useEffect(() => {
-    if (isHighContrast) {
-      document.body.classList.add('high-contrast');
+    if (isDarkMode) {
+      document.body.classList.add('dark-mode');
     } else {
-      document.body.classList.remove('high-contrast');
+      document.body.classList.remove('dark-mode');
     }
-  }, [isHighContrast]);
+  }, [isDarkMode]);
 
   React.useEffect(() => {
     const initData = async () => {

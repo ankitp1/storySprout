@@ -76,35 +76,35 @@
 
 /* Dark Mode Support */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg-color: #1A1F36;
-    --surface-color: #2D3748;
-    --surface-light: #374151;
-    --text-main: #F0F4F8;
-    --text-secondary: #D1D5DB;
-    --text-muted: #9CA3AF;
-    --border: #4B5563;
-    --shadow-xs: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
-    --btn-text-color: #1A1F36; /* Dark text for neon buttons in dark mode */
+  body:not(.light-mode) {
+    --bg-color: #0F172A;
+    --surface-color: #1E2A45;
+    --surface-light: #24355A;
+    --text-main: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+    --border: rgba(255, 255, 255, 0.1);
+    --shadow-xs: 0 2px 8px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.6);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.7);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.8);
+    --btn-text-color: #0F172A; /* Dark text for neon buttons in dark mode */
   }
 }
 
-/* High Contrast Mode */
-.high-contrast {
-  --bg-color: #000000;
-  --surface-color: #111111;
-  --surface-light: #222222;
-  --text-main: #FFFFFF;
-  --text-secondary: #FFFFFF;
-  --text-muted: #CCCCCC;
-  --border: #FFFFFF;
-  --primary: #FFFF00;
-  --secondary: #00FFFF;
-  --accent: #FF00FF;
-  --btn-text-color: #000000; /* Dark text for neon buttons */
+body.dark-mode {
+  --bg-color: #0F172A;
+  --surface-color: #1E2A45;
+  --surface-light: #24355A;
+  --text-main: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --border: rgba(255, 255, 255, 0.1);
+  --shadow-xs: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.8);
+  --btn-text-color: #0F172A; /* Dark text for neon buttons in dark mode */
 }
 
 /* ====================================================================
@@ -289,10 +289,15 @@ button:focus-visible {
 }
 
 @media (prefers-color-scheme: dark) {
-  .glass {
-    background: rgba(36, 40, 59, 0.7);
+  body:not(.light-mode) .glass {
+    background: rgba(30, 42, 69, 0.7);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
+}
+
+body.dark-mode .glass {
+  background: rgba(30, 42, 69, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* ====================================================================
@@ -644,3 +649,126 @@ input::placeholder {
 
 .rounded-full { border-radius: var(--radius-full); }
 .rounded-lg { border-radius: var(--radius-lg); }
+
+/* ====================================================================
+   MOBILE & RESPONSIVE OVERRIDES
+   ==================================================================== */
+@media (max-width: 640px) {
+  /* Font size scales */
+  h1 { font-size: 2rem !important; }
+  h2 { font-size: 1.6rem !important; }
+  h3 { font-size: 1.35rem !important; }
+  h4 { font-size: 1.15rem !important; }
+
+  /* App main padding wrapper */
+  .app-main {
+    padding: 1rem !important;
+  }
+
+  /* Library Layout Header */
+  .library-header {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 1.25rem !important;
+    margin-bottom: 2rem !important;
+    text-align: center;
+  }
+
+  .library-header h1 {
+    font-size: 2.2rem !important;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem !important;
+  }
+
+  .library-header-controls {
+    justify-content: center !important;
+    flex-wrap: wrap;
+    gap: 0.75rem !important;
+    width: 100%;
+  }
+
+  /* Discovery & Search stack */
+  .search-sort-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+  }
+
+  .search-sort-row select {
+    width: 100% !important;
+  }
+
+  /* Grid details */
+  .book-grid {
+    gap: 1.5rem !important;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+  }
+
+  /* Book Cards responsive scaling */
+  .book-card {
+    padding: 0.75rem !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .book-card h3 {
+    font-size: 1.05rem !important;
+  }
+
+  .book-card .play-overlay div {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .book-card .play-overlay svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  /* Modal responsiveness for shop/forms */
+  .add-profile-content, .shop-modal-content {
+    padding: 1.5rem !important;
+    border-radius: var(--radius-md) !important;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  /* Avatar Shop grids */
+  .shop-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+    gap: 1rem !important;
+  }
+
+  /* PIN Panel Pad button size reduction */
+  .pin-pad {
+    gap: 12px !important;
+  }
+
+  .pin-pad-btn {
+    width: 60px !important;
+    height: 60px !important;
+    font-size: 1.5rem !important;
+  }
+
+  /* Admin Dashboard Mobile Responsiveness */
+  .admin-container {
+    padding: 1rem !important;
+  }
+
+  .admin-header {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 1.5rem !important;
+    margin-bottom: 2rem !important;
+    text-align: center;
+  }
+
+  .admin-header h1 {
+    text-align: center !important;
+  }
+
+  .admin-header-controls {
+    justify-content: center !important;
+    width: 100%;
+  }
+}
