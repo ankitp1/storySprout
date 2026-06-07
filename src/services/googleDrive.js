@@ -14,10 +14,16 @@ const fetchFolderContents = async (folderId, apiKey) => {
   const data = await res.json();
   const files = data.files || [];
   
+  const audioFiles = files.filter(f => f.mimeType.startsWith('audio/'));
+  audioFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
+  const subFolders = files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+  subFolders.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+  
   return {
-    audioFiles: files.filter(f => f.mimeType.startsWith('audio/')),
+    audioFiles,
     imageFiles: files.filter(f => f.mimeType.startsWith('image/')),
-    subFolders: files.filter(f => f.mimeType === 'application/vnd.google-apps.folder')
+    subFolders
   };
 };
 
