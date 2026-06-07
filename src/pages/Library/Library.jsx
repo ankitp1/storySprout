@@ -299,7 +299,7 @@ export default function Library() {
     {
       selector: '[data-tour="profile"]',
       title: "Kid Profiles",
-      content: "This is your kid's profile! Multiple kids can share the app, each with their own character, progress tracking, and reward points.",
+      content: "This is your kid's profile! Multiple kids can share the app, each with their own character, progress, points, and optional 4-digit PIN security.",
       icon: "🦊"
     },
     {
@@ -323,7 +323,7 @@ export default function Library() {
     {
       selector: '[data-tour="parent-zone"]',
       title: "Parent Zone 🔐",
-      content: "Protected by a secure 4-digit PIN. Tap this gear to sync audiobooks, check stats/reviews, approve/restrict books, manage session time limits (defaults to 60 mins), or reset profile permissions.",
+      content: "Protected by a secure PIN. Tap this gear to sync audiobooks, check stats, approve/restrict books, manage session limits, reset profile PINs, or email developer support logs.",
       icon: "🛡️"
     },
     {

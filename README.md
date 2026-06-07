@@ -16,7 +16,9 @@ StorySprout is a 100% frontend, legacy-friendly (iOS 9.3.5 compatible) web appli
 - **Parental Session Limits**: Parents can set a maximum listening limit per session (defaults to 60 minutes). Once reached, the screen locks and requires a parent PIN to resume.
 - **Profile Reset & Custom Access**: Parent dashboard includes settings to reset all custom book access permissions for any child profile in one click.
 - **Offline Support**: Entirely local state persistence and offline capabilities using IndexedDB / localForage, ensuring the app works without an active internet connection.
-- **Parent Dashboard**: Secured behind a PIN (`1234`), the dashboard displays detailed listening stats, completed books, total listening time, custom book approval/restriction toggles, and discussion questions (synced from a live Google Sheet) for the active child profile.
+- **Cloud-Based Profiles & PINs**: Profiles and listening progress sync automatically to Firebase Firestore across all family devices, secured by kid-friendly 4-digit PIN gates to prevent kids from entering other profiles.
+- **Diagnostics & Error Reporting**: Features a global React Error Boundary for crash recovery and a support card in the Parent Dashboard that packages system specs, Zustand store state, and console warnings/errors into a direct `mailto:` bug report to the developer.
+- **Parent Dashboard**: Secured behind a PIN (`1234`), the dashboard displays detailed listening stats, completed books, total listening time, custom book approval/restriction toggles, PIN resets, and discussion questions (synced from a live Google Sheet) for the active child profile.
 
 ## 🚀 Tech Stack
 
