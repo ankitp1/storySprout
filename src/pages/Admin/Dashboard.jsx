@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import { LogOut, RefreshCw, Trash2, Info, BookOpen, Key, Link, ArrowLeft, ExternalLink, Mail } from 'lucide-react';
+import { LogOut, RefreshCw, Trash2, Info, BookOpen, Key, Link, ArrowLeft, ExternalLink, Mail, Lock } from 'lucide-react';
 import { fetchBooksFromDrive } from '../../services/googleDrive';
 import { fetchBookCover, fetchBookDetails } from '../../services/googleBooks';
 import { clearDriveCache, setDriveCache } from '../../lib/driveCache';
