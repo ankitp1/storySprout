@@ -100,4 +100,23 @@ describe('useStore', () => {
     useStore.getState().incrementSessionTime(60);
     expect(useStore.getState().isSessionLocked).toBe(true);
   });
+
+  it('should support profile creation with PIN and updates', () => {
+    // 1. Add profile with PIN
+    useStore.getState().addProfile('Rowan', '🦊', '#FF6B6B', '5555');
+    const profiles = useStore.getState().profiles;
+    expect(profiles.length).toBe(1);
+    expect(profiles[0].name).toBe('Rowan');
+    expect(profiles[0].pin).toBe('5555');
+
+    const profileId = profiles[0].id;
+
+    // 2. Update profile PIN
+    useStore.getState().updateProfile(profileId, { pin: '7777' });
+    expect(useStore.getState().profiles[0].pin).toBe('7777');
+
+    // 3. Clear profile PIN
+    useStore.getState().updateProfile(profileId, { pin: '' });
+    expect(useStore.getState().profiles[0].pin).toBe('');
+  });
 });

@@ -20,7 +20,7 @@ const getCleanSearchQuery = (title) => {
 };
 
 export default function Dashboard() {
-  const { books, addBook, removeBook, isAdmin, setAdminStatus, profiles, activeProfileId, resetApprovedBooks, sessionLimits, setSessionLimit } = useStore();
+  const { books, addBook, removeBook, isAdmin, setAdminStatus, profiles, activeProfileId, resetApprovedBooks, sessionLimits, setSessionLimit, updateProfile } = useStore();
   const navigate = useNavigate();
   const [isSyncing, setIsSyncing] = useState(false);
   const [imgError, setImgError] = useState({});
@@ -50,7 +50,7 @@ export default function Dashboard() {
       setStatusMsg(`Found ${fetchedBooks.length} books. Fetching cover images...`);
       for (const book of fetchedBooks) {
         if (!book.hasCustomCover) {
-          const coverUrl = await fetchBookCover(book.title);
+          const coverUrl = await fetchBookCover(getCleanSearchQuery(book.title));
           if (coverUrl) book.coverUrl = coverUrl;
         }
         if (books.find(b => b.id === book.id)) removeBook(book.id);
@@ -144,29 +144,63 @@ export default function Dashboard() {
           </select>
           
           {selectedProfileId && (
-            <button
-              onClick={() => {
-                const profile = profiles.find(p => p.id === selectedProfileId);
-                if (window.confirm(`Are you sure you want to reset all book approvals/permissions for ${profile ? profile.name : 'this profile'}? They will need a parent to approve books again.`)) {
-                  resetApprovedBooks(selectedProfileId);
-                  alert(`All approvals reset for ${profile ? profile.name : 'this profile'}.`);
-                }
-              }}
-              className="btn-secondary"
-              style={{ 
-                borderColor: 'var(--primary)', 
-                color: 'var(--primary)', 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: '0.5rem',
-                fontSize: '0.9rem',
-                padding: '0.5rem 1.25rem',
-                height: '44px'
-              }}
-            >
-              <Key size={16} />
-              Reset Book Approvals
-            </button>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => {
+                  const profile = profiles.find(p => p.id === selectedProfileId);
+                  if (window.confirm(`Are you sure you want to reset all book approvals/permissions for ${profile ? profile.name : 'this profile'}? They will need a parent to approve books again.`)) {
+                    resetApprovedBooks(selectedProfileId);
+                    alert(`All approvals reset for ${profile ? profile.name : 'this profile'}.`);
+                  }
+                }}
+                className="btn-secondary"
+                style={{ 
+                  borderColor: 'var(--primary)', 
+                  color: 'var(--primary)', 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  fontSize: '0.9rem',
+                  padding: '0.5rem 1.25rem',
+                  height: '44px'
+                }}
+              >
+                <Key size={16} />
+                Reset Book Approvals
+              </button>
+
+              <button
+                onClick={() => {
+                  const profile = profiles.find(p => p.id === selectedProfileId);
+                  const currentPinText = profile?.pin ? `Current PIN is: ${profile.pin}` : 'No PIN configured.';
+                  const newPinVal = window.prompt(`${currentPinText}\n\nEnter a new 4-digit PIN for ${profile?.name || 'this profile'} (or leave blank to remove the PIN):`, profile?.pin || '');
+                  
+                  if (newPinVal !== null) {
+                    const cleanPin = newPinVal.replace(/\D/g, '').slice(0, 4);
+                    if (newPinVal && cleanPin.length !== 4 && cleanPin.length !== 0) {
+                      alert('PIN must be exactly 4 digits or blank!');
+                      return;
+                    }
+                    updateProfile(selectedProfileId, { pin: cleanPin });
+                    alert(`PIN successfully ${cleanPin ? 'updated to ' + cleanPin : 'removed'} for ${profile?.name}.`);
+                  }
+                }}
+                className="btn-secondary"
+                style={{ 
+                  borderColor: 'var(--primary)', 
+                  color: 'var(--primary)', 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  fontSize: '0.9rem',
+                  padding: '0.5rem 1.25rem',
+                  height: '44px'
+                }}
+              >
+                <Lock size={16} />
+                Manage Profile PIN
+              </button>
+            </div>
           )}
         </div>
       )}

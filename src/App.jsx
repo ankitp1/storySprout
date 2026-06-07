@@ -23,7 +23,7 @@ const ProtectedProfileRoute = ({ children }) => {
 };
 
 function App() {
-  const { books, addBook, setDiscussionQuestions } = useStore();
+  const { books, addBook, setDiscussionQuestions, syncWithCloud } = useStore();
   const isDarkMode = useStore(state => state.isDarkMode);
 
   React.useEffect(() => {
@@ -35,12 +35,14 @@ function App() {
   }, [isDarkMode]);
 
   React.useEffect(() => {
+    // Cloud Sync and Discussion Questions Init
     const initData = async () => {
+      syncWithCloud();
       const questions = await loadDiscussionQuestions();
       setDiscussionQuestions(questions);
     };
     initData();
-  }, [setDiscussionQuestions]);
+  }, [setDiscussionQuestions, syncWithCloud]);
 
   const removeBook = useStore((state) => state.removeBook);
 

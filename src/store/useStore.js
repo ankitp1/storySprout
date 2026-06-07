@@ -8,15 +8,31 @@ import {
   deleteOfflineCover, 
   checkBookDownloadStatus 
 } from '../lib/offlineDb';
+import { isFirebaseAvailable, saveProfileToCloud, deleteProfileFromCloud, fetchProfilesFromCloud } from '../services/firebase';
 
 localforage.config({
   name: 'RowansLibraryDB',
   storeName: 'books'
 });
 
+let syncTimeout = null;
+const triggerCloudSync = (get) => {
+  if (!isFirebaseAvailable()) return;
+  if (syncTimeout) clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(async () => {
+    const syncProfileToCloud = get().syncProfileToCloud;
+    if (syncProfileToCloud) {
+      await syncProfileToCloud();
+    }
+  }, 5000); // Debounce for 5 seconds
+};
+
 const useStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
+      // Cloud sync state
+      isFirebaseSyncing: false,
+
       // Admin State
       isAdmin: false,
       adminPin: '1234', // Default for MVP
@@ -26,9 +42,28 @@ const useStore = create(
       profiles: [],
       activeProfileId: null,
       
-      addProfile: (name, avatar, color) => set((state) => ({
-        profiles: [...state.profiles, { id: Date.now().toString(), name, avatar, color }]
-      })),
+      addProfile: (name, avatar, color, pin) => set((state) => {
+        const newProfile = { id: Date.now().toString(), name, avatar, color, pin: pin || '', lastUpdated: Date.now() };
+        const newState = {
+          profiles: [...state.profiles, newProfile]
+        };
+        // Sync to cloud if available
+        if (isFirebaseAvailable()) {
+          const fullProfile = {
+            ...newProfile,
+            progress: {},
+            readBooks: [],
+            listeningStats: {},
+            ratings: {},
+            approvedBooks: [],
+            points: 0,
+            unlockedAvatars: [],
+            sessionLimit: 60
+          };
+          saveProfileToCloud(fullProfile);
+        }
+        return newState;
+      }),
       
       setActiveProfile: (profileId) => set({ 
         activeProfileId: profileId,
@@ -36,12 +71,34 @@ const useStore = create(
         isSessionLocked: false
       }),
       
-      updateProfile: (profileId, updates) => set((state) => ({
-        profiles: state.profiles.map(p => p.id === profileId ? { ...p, ...updates } : p)
-      })),
+      updateProfile: (profileId, updates) => set((state) => {
+        const updatedProfiles = state.profiles.map(p => p.id === profileId ? { ...p, ...updates, lastUpdated: Date.now() } : p);
+        const newState = { profiles: updatedProfiles };
+        
+        if (isFirebaseAvailable()) {
+          const updatedProfile = updatedProfiles.find(p => p.id === profileId);
+          if (updatedProfile) {
+            const fullProfile = {
+              ...updatedProfile,
+              progress: state.progress[profileId] || {},
+              readBooks: state.readBooks[profileId] || [],
+              listeningStats: state.listeningStats[profileId] || {},
+              ratings: state.ratings[profileId] || {},
+              approvedBooks: state.approvedBooks[profileId] || [],
+              points: state.points[profileId] || 0,
+              unlockedAvatars: state.unlockedAvatars[profileId] || [],
+              sessionLimit: state.sessionLimits[profileId] !== undefined ? state.sessionLimits[profileId] : 60
+            };
+            saveProfileToCloud(fullProfile);
+          }
+        }
+        return newState;
+      }),
       
       removeProfile: (profileId) => set((state) => {
-        // Need to clean up scoped data for this profile if we wanted, but keeping it simple for now
+        if (isFirebaseAvailable()) {
+          deleteProfileFromCloud(profileId);
+        }
         return {
           profiles: state.profiles.filter(p => p.id !== profileId),
           activeProfileId: state.activeProfileId === profileId ? null : state.activeProfileId
@@ -65,158 +122,184 @@ const useStore = create(
       
       // Progress Tracking (scoped by profile: profileId -> bookId -> { chapterIndex, currentTime })
       progress: {},
-      updateProgress: (bookId, chapterIndex, currentTime) => set((state) => {
-        if (!state.activeProfileId) return state;
-        const profileProgress = state.progress[state.activeProfileId] || {};
-        return {
-          progress: {
-            ...state.progress,
-            [state.activeProfileId]: {
-              ...profileProgress,
-              [bookId]: { chapterIndex, currentTime }
+      updateProgress: (bookId, chapterIndex, currentTime) => {
+        set((state) => {
+          if (!state.activeProfileId) return state;
+          const profileProgress = state.progress[state.activeProfileId] || {};
+          return {
+            progress: {
+              ...state.progress,
+              [state.activeProfileId]: {
+                ...profileProgress,
+                [bookId]: { chapterIndex, currentTime }
+              }
             }
-          }
-        };
-      }),
+          };
+        });
+        triggerCloudSync(get);
+      },
       
       // Completed Books (scoped by profile)
       readBooks: {},
-      markBookAsRead: (bookId) => set((state) => {
-        if (!state.activeProfileId) return state;
-        const now = new Date().toISOString();
-        
-        const profileReadBooks = state.readBooks[state.activeProfileId] || [];
-        const profileStats = state.listeningStats[state.activeProfileId] || {};
-        const bookStats = profileStats[bookId] || {};
-        
-        return {
-          readBooks: {
-            ...state.readBooks,
-            [state.activeProfileId]: profileReadBooks.includes(bookId) ? profileReadBooks : [...profileReadBooks, bookId]
-          },
-          listeningStats: {
-            ...state.listeningStats,
-            [state.activeProfileId]: {
-              ...profileStats,
-              [bookId]: {
-                ...bookStats,
-                completed: true,
-                completedAt: now
+      markBookAsRead: (bookId) => {
+        set((state) => {
+          if (!state.activeProfileId) return state;
+          const now = new Date().toISOString();
+          
+          const profileReadBooks = state.readBooks[state.activeProfileId] || [];
+          const profileStats = state.listeningStats[state.activeProfileId] || {};
+          const bookStats = profileStats[bookId] || {};
+          
+          return {
+            readBooks: {
+              ...state.readBooks,
+              [state.activeProfileId]: profileReadBooks.includes(bookId) ? profileReadBooks : [...profileReadBooks, bookId]
+            },
+            listeningStats: {
+              ...state.listeningStats,
+              [state.activeProfileId]: {
+                ...profileStats,
+                [bookId]: {
+                  ...bookStats,
+                  completed: true,
+                  completedAt: now
+                }
               }
             }
-          }
-        };
-      }),
+          };
+        });
+        triggerCloudSync(get);
+      },
 
       // Parental Approvals (scoped by profile)
       approvedBooks: {},
-      approveBook: (bookId) => set((state) => {
-        if (!state.activeProfileId) return state;
-        const profileApproved = state.approvedBooks[state.activeProfileId] || [];
-        if (profileApproved.includes(bookId)) return state;
-        
-        return {
+      approveBook: (bookId) => {
+        set((state) => {
+          if (!state.activeProfileId) return state;
+          const profileApproved = state.approvedBooks[state.activeProfileId] || [];
+          if (profileApproved.includes(bookId)) return state;
+          
+          return {
+            approvedBooks: {
+              ...state.approvedBooks,
+              [state.activeProfileId]: [...profileApproved, bookId]
+            }
+          };
+        });
+        triggerCloudSync(get);
+      },
+      resetApprovedBooks: (profileId) => {
+        set((state) => ({
           approvedBooks: {
             ...state.approvedBooks,
-            [state.activeProfileId]: [...profileApproved, bookId]
+            [profileId]: []
           }
-        };
-      }),
-      resetApprovedBooks: (profileId) => set((state) => ({
-        approvedBooks: {
-          ...state.approvedBooks,
-          [profileId]: []
-        }
-      })),
+        }));
+        triggerCloudSync(get);
+      },
 
       // Gamification
       points: {},
-      addPoints: (amount) => set((state) => {
-        if (!state.activeProfileId) return state;
-        const currentPoints = state.points[state.activeProfileId] || 0;
-        return {
-          points: {
-            ...state.points,
-            [state.activeProfileId]: currentPoints + amount
-          }
-        };
-      }),
+      addPoints: (amount) => {
+        set((state) => {
+          if (!state.activeProfileId) return state;
+          const currentPoints = state.points[state.activeProfileId] || 0;
+          return {
+            points: {
+              ...state.points,
+              [state.activeProfileId]: currentPoints + amount
+            }
+          };
+        });
+        triggerCloudSync(get);
+      },
 
       unlockedAvatars: {},
-      unlockAvatar: (avatarUrl, cost) => set((state) => {
-        if (!state.activeProfileId) return state;
-        const currentPoints = state.points[state.activeProfileId] || 0;
-        if (currentPoints < cost) return state; // Insufficient points
-        
-        const unlocked = state.unlockedAvatars[state.activeProfileId] || [];
-        if (unlocked.includes(avatarUrl)) return state; // Already unlocked
+      unlockAvatar: (avatarUrl, cost) => {
+        set((state) => {
+          if (!state.activeProfileId) return state;
+          const currentPoints = state.points[state.activeProfileId] || 0;
+          if (currentPoints < cost) return state; // Insufficient points
+          
+          const unlocked = state.unlockedAvatars[state.activeProfileId] || [];
+          if (unlocked.includes(avatarUrl)) return state; // Already unlocked
 
-        return {
-          points: {
-            ...state.points,
-            [state.activeProfileId]: currentPoints - cost
-          },
-          unlockedAvatars: {
-            ...state.unlockedAvatars,
-            [state.activeProfileId]: [...unlocked, avatarUrl]
-          }
-        };
-      }),
+          return {
+            points: {
+              ...state.points,
+              [state.activeProfileId]: currentPoints - cost
+            },
+            unlockedAvatars: {
+              ...state.unlockedAvatars,
+              [state.activeProfileId]: [...unlocked, avatarUrl]
+            }
+          };
+        });
+        triggerCloudSync(get);
+      },
 
       // Analytics & Discussion
-      // Analytics & Discussion (scoped by profile)
       listeningStats: {},
-      updateListeningStats: (bookId, currentTimeAdded) => set((state) => {
-        if (!state.activeProfileId) return state;
-        const profileStats = state.listeningStats[state.activeProfileId] || {};
-        const currentStats = profileStats[bookId] || { totalTimeSeconds: 0, sessionsCount: 0 };
-        return {
-          listeningStats: {
-            ...state.listeningStats,
-            [state.activeProfileId]: {
-              ...profileStats,
-              [bookId]: {
-                ...currentStats,
-                totalTimeSeconds: currentStats.totalTimeSeconds + currentTimeAdded,
-                lastListenedAt: new Date().toISOString()
+      updateListeningStats: (bookId, currentTimeAdded) => {
+        set((state) => {
+          if (!state.activeProfileId) return state;
+          const profileStats = state.listeningStats[state.activeProfileId] || {};
+          const currentStats = profileStats[bookId] || { totalTimeSeconds: 0, sessionsCount: 0 };
+          return {
+            listeningStats: {
+              ...state.listeningStats,
+              [state.activeProfileId]: {
+                ...profileStats,
+                [bookId]: {
+                  ...currentStats,
+                  totalTimeSeconds: currentStats.totalTimeSeconds + currentTimeAdded,
+                  lastListenedAt: new Date().toISOString()
+                }
               }
             }
-          }
-        };
-      }),
+          };
+        });
+        triggerCloudSync(get);
+      },
       
-      incrementSessionCount: (bookId) => set((state) => {
-        if (!state.activeProfileId) return state;
-        const profileStats = state.listeningStats[state.activeProfileId] || {};
-        const currentStats = profileStats[bookId] || { totalTimeSeconds: 0, sessionsCount: 0 };
-        return {
-          listeningStats: {
-            ...state.listeningStats,
-            [state.activeProfileId]: {
-              ...profileStats,
-              [bookId]: {
-                ...currentStats,
-                sessionsCount: currentStats.sessionsCount + 1
+      incrementSessionCount: (bookId) => {
+        set((state) => {
+          if (!state.activeProfileId) return state;
+          const profileStats = state.listeningStats[state.activeProfileId] || {};
+          const currentStats = profileStats[bookId] || { totalTimeSeconds: 0, sessionsCount: 0 };
+          return {
+            listeningStats: {
+              ...state.listeningStats,
+              [state.activeProfileId]: {
+                ...profileStats,
+                [bookId]: {
+                  ...currentStats,
+                  sessionsCount: currentStats.sessionsCount + 1
+                }
               }
             }
-          }
-        };
-      }),
+          };
+        });
+        triggerCloudSync(get);
+      },
 
       ratings: {},
-      rateBook: (bookId, rating) => set((state) => {
-        if (!state.activeProfileId) return state;
-        const profileRatings = state.ratings[state.activeProfileId] || {};
-        return {
-          ratings: {
-            ...state.ratings,
-            [state.activeProfileId]: {
-              ...profileRatings,
-              [bookId]: rating
+      rateBook: (bookId, rating) => {
+        set((state) => {
+          if (!state.activeProfileId) return state;
+          const profileRatings = state.ratings[state.activeProfileId] || {};
+          return {
+            ratings: {
+              ...state.ratings,
+              [state.activeProfileId]: {
+                ...profileRatings,
+                [bookId]: rating
+              }
             }
-          }
-        };
-      }),
+          };
+        });
+        triggerCloudSync(get);
+      },
 
       discussionQuestions: [],
       setDiscussionQuestions: (questions) => set({ discussionQuestions: questions }),
@@ -342,12 +425,15 @@ const useStore = create(
       sessionTimeUsed: 0,
       isSessionLocked: false,
 
-      setSessionLimit: (profileId, minutes) => set((state) => ({
-        sessionLimits: {
-          ...state.sessionLimits,
-          [profileId]: minutes
-        }
-      })),
+      setSessionLimit: (profileId, minutes) => {
+        set((state) => ({
+          sessionLimits: {
+            ...state.sessionLimits,
+            [profileId]: minutes
+          }
+        }));
+        triggerCloudSync(get);
+      },
 
       incrementSessionTime: (seconds) => set((state) => {
         if (!state.activeProfileId) return state;
@@ -370,6 +456,157 @@ const useStore = create(
         sessionTimeUsed: 0,
         isSessionLocked: false
       }),
+
+      // Cloud Actions
+      syncProfileToCloud: async (profileId) => {
+        if (!isFirebaseAvailable()) return;
+        const state = get();
+        const targetId = profileId || state.activeProfileId;
+        if (!targetId) return;
+
+        // Update local timestamp so it matches/records changes
+        const updatedProfiles = state.profiles.map(p => p.id === targetId ? { ...p, lastUpdated: Date.now() } : p);
+        set({ profiles: updatedProfiles });
+
+        const profile = updatedProfiles.find(p => p.id === targetId);
+        if (!profile) return;
+
+        const fullProfile = {
+          id: profile.id,
+          name: profile.name,
+          avatar: profile.avatar,
+          color: profile.color,
+          pin: profile.pin || '',
+          lastUpdated: profile.lastUpdated || Date.now(),
+          progress: get().progress[targetId] || {},
+          readBooks: get().readBooks[targetId] || [],
+          listeningStats: get().listeningStats[targetId] || {},
+          ratings: get().ratings[targetId] || {},
+          approvedBooks: get().approvedBooks[targetId] || [],
+          points: get().points[targetId] || 0,
+          unlockedAvatars: get().unlockedAvatars[targetId] || [],
+          sessionLimit: get().sessionLimits[targetId] !== undefined ? get().sessionLimits[targetId] : 60
+        };
+        await saveProfileToCloud(fullProfile);
+      },
+
+      flushCloudSync: async () => {
+        if (syncTimeout) clearTimeout(syncTimeout);
+        await get().syncProfileToCloud();
+      },
+
+      syncWithCloud: async () => {
+        if (!isFirebaseAvailable()) return;
+        set({ isFirebaseSyncing: true });
+        try {
+          const cloudProfiles = await fetchProfilesFromCloud();
+          const localProfiles = get().profiles;
+          
+          let profilesUpdated = [...localProfiles];
+          let progressUpdated = { ...get().progress };
+          let readBooksUpdated = { ...get().readBooks };
+          let listeningStatsUpdated = { ...get().listeningStats };
+          let ratingsUpdated = { ...get().ratings };
+          let approvedBooksUpdated = { ...get().approvedBooks };
+          let pointsUpdated = { ...get().points };
+          let unlockedAvatarsUpdated = { ...get().unlockedAvatars };
+          let sessionLimitsUpdated = { ...get().sessionLimits };
+          
+          for (const cloudP of cloudProfiles) {
+            const localP = localProfiles.find(p => p.id === cloudP.id);
+            
+            if (!localP || (cloudP.lastUpdated || 0) > (localP.lastUpdated || 0)) {
+              // Cloud is newer: Pull cloud data
+              if (!localP) {
+                profilesUpdated.push({
+                  id: cloudP.id,
+                  name: cloudP.name,
+                  avatar: cloudP.avatar,
+                  color: cloudP.color,
+                  pin: cloudP.pin || '',
+                  lastUpdated: cloudP.lastUpdated || Date.now()
+                });
+              } else {
+                profilesUpdated = profilesUpdated.map(p => p.id === cloudP.id ? {
+                  ...p,
+                  name: cloudP.name,
+                  avatar: cloudP.avatar,
+                  color: cloudP.color,
+                  pin: cloudP.pin || '',
+                  lastUpdated: cloudP.lastUpdated || Date.now()
+                } : p);
+              }
+              
+              progressUpdated[cloudP.id] = cloudP.progress || {};
+              readBooksUpdated[cloudP.id] = cloudP.readBooks || [];
+              listeningStatsUpdated[cloudP.id] = cloudP.listeningStats || {};
+              ratingsUpdated[cloudP.id] = cloudP.ratings || {};
+              approvedBooksUpdated[cloudP.id] = cloudP.approvedBooks || [];
+              pointsUpdated[cloudP.id] = cloudP.points || 0;
+              unlockedAvatarsUpdated[cloudP.id] = cloudP.unlockedAvatars || [];
+              sessionLimitsUpdated[cloudP.id] = cloudP.sessionLimit !== undefined ? cloudP.sessionLimit : 60;
+            } else if (localP && (localP.lastUpdated || 0) > (cloudP.lastUpdated || 0)) {
+              // Local is newer: Push local data to cloud
+              const fullProfile = {
+                id: localP.id,
+                name: localP.name,
+                avatar: localP.avatar,
+                color: localP.color,
+                pin: localP.pin || '',
+                lastUpdated: localP.lastUpdated || Date.now(),
+                progress: get().progress[localP.id] || {},
+                readBooks: get().readBooks[localP.id] || [],
+                listeningStats: get().listeningStats[localP.id] || {},
+                ratings: get().ratings[localP.id] || {},
+                approvedBooks: get().approvedBooks[localP.id] || [],
+                points: get().points[localP.id] || 0,
+                unlockedAvatars: get().unlockedAvatars[localP.id] || [],
+                sessionLimit: get().sessionLimits[localP.id] !== undefined ? get().sessionLimits[localP.id] : 60
+              };
+              await saveProfileToCloud(fullProfile);
+            }
+          }
+          
+          // Push local-only profiles that are not in cloud
+          for (const localP of localProfiles) {
+            if (!cloudProfiles.some(cp => cp.id === localP.id)) {
+              const fullProfile = {
+                id: localP.id,
+                name: localP.name,
+                avatar: localP.avatar,
+                color: localP.color,
+                pin: localP.pin || '',
+                lastUpdated: localP.lastUpdated || Date.now(),
+                progress: get().progress[localP.id] || {},
+                readBooks: get().readBooks[localP.id] || [],
+                listeningStats: get().listeningStats[localP.id] || {},
+                ratings: get().ratings[localP.id] || {},
+                approvedBooks: get().approvedBooks[localP.id] || [],
+                points: get().points[localP.id] || 0,
+                unlockedAvatars: get().unlockedAvatars[localP.id] || [],
+                sessionLimit: get().sessionLimits[localP.id] !== undefined ? get().sessionLimits[localP.id] : 60
+              };
+              await saveProfileToCloud(fullProfile);
+            }
+          }
+          
+          set({
+            profiles: profilesUpdated,
+            progress: progressUpdated,
+            readBooks: readBooksUpdated,
+            listeningStats: listeningStatsUpdated,
+            ratings: ratingsUpdated,
+            approvedBooks: approvedBooksUpdated,
+            points: pointsUpdated,
+            unlockedAvatars: unlockedAvatarsUpdated,
+            sessionLimits: sessionLimitsUpdated
+          });
+        } catch (error) {
+          console.error('Error syncing with cloud:', error);
+        } finally {
+          set({ isFirebaseSyncing: false });
+        }
+      },
     }),
     {
       name: 'rowans-library-storage', // name of the item in the storage (must be unique)

@@ -19,6 +19,7 @@ export default function Player() {
   const addPoints = useStore(state => state.addPoints);
   const isSessionLocked = useStore(state => state.isSessionLocked);
   const incrementSessionTime = useStore(state => state.incrementSessionTime);
+  const flushCloudSync = useStore(state => state.flushCloudSync);
 
   // Audio State
   const [chapterIndex, setChapterIndex] = useState(progress.chapterIndex || 0);
@@ -126,9 +127,10 @@ export default function Player() {
     return () => {
       if (audioRef.current) {
         updateProgress(bookId, chapterIndex, audioRef.current.currentTime);
+        flushCloudSync();
       }
     };
-  }, [bookId, chapterIndex, updateProgress]);
+  }, [bookId, chapterIndex, updateProgress, flushCloudSync]);
 
   // Load offline cover if available
   useEffect(() => {
