@@ -33,13 +33,8 @@ const buildBookObj = (folderItem, contents, apiKey, seriesName) => {
   
   if (contents.imageFiles.length > 0) {
     const img = contents.imageFiles[0];
-    if (img.thumbnailLink) {
-      coverUrl = img.thumbnailLink.replace(/=s\d+/, '=s800');
-    } else if (img.webContentLink) {
-      coverUrl = img.webContentLink;
-    } else {
-      coverUrl = `https://www.googleapis.com/drive/v3/files/${img.id}?alt=media&key=${apiKey}`;
-    }
+    // Always use the persistent Google Drive media download link to prevent link expiry
+    coverUrl = `https://www.googleapis.com/drive/v3/files/${img.id}?alt=media&key=${apiKey}`;
     hasCustomCover = true;
   }
 
