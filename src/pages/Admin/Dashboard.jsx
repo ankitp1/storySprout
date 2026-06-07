@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import { LogOut, RefreshCw, Trash2, Info, BookOpen, Key, Link, ArrowLeft, ExternalLink } from 'lucide-react';
+import { LogOut, RefreshCw, Trash2, Info, BookOpen, Key, Link, ArrowLeft, ExternalLink, Mail } from 'lucide-react';
 import { fetchBooksFromDrive } from '../../services/googleDrive';
 import { fetchBookCover, fetchBookDetails } from '../../services/googleBooks';
 import { clearDriveCache, setDriveCache } from '../../lib/driveCache';
 import PINEntry from '../../components/ParentDashboard/PINEntry';
 import DashboardOverview from '../../components/ParentDashboard/DashboardOverview';
 import ListeningStats from '../../components/ParentDashboard/ListeningStats';
+import { triggerDeveloperEmail } from '../../lib/diagnostics';
 
 const getCleanSearchQuery = (title) => {
   if (!title) return '';
@@ -30,6 +31,7 @@ export default function Dashboard() {
   // Book Insights State
   const [selectedBookInfo, setSelectedBookInfo] = useState(null);
   const [isFetchingInfo, setIsFetchingInfo] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState('');
 
   // Use the global isAdmin state, and if not admin, use PINEntry to set it
   if (!isAdmin) {
@@ -305,6 +307,46 @@ export default function Dashboard() {
               ))
             )}
           </div>
+        </div>
+        
+        {/* Support & Feedback Card */}
+        <div style={{ background: 'var(--surface-color)', borderRadius: '16px', padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+          <h2 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Mail size={24} color="var(--primary)" />
+            Support & Feedback 💬
+          </h2>
+          <p style={{ margin: '0 0 1.5rem 0', color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.4' }}>
+            Encountered an issue or have a suggestion? Type it below and click to send a pre-formatted diagnostic report (including device info, sync status, and recent console warning/error logs) to developer at **ankitp1@gmail.com**.
+          </p>
+          <textarea
+            value={feedbackMsg}
+            onChange={(e) => setFeedbackMsg(e.target.value)}
+            placeholder="Tell us what went wrong or suggest a feature..."
+            rows={4}
+            style={{
+              width: '100%',
+              padding: '1rem',
+              borderRadius: '12px',
+              border: '2px solid var(--border)',
+              background: 'var(--bg-color)',
+              color: 'var(--text-main)',
+              fontSize: '1rem',
+              resize: 'vertical',
+              boxSizing: 'border-box',
+              marginBottom: '1rem'
+            }}
+          />
+          <button
+            onClick={() => {
+              triggerDeveloperEmail(useStore.getState(), feedbackMsg);
+              setFeedbackMsg('');
+            }}
+            className="btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: 'fit-content' }}
+          >
+            <Mail size={18} />
+            Email Diagnostic Report
+          </button>
         </div>
       </div>
 

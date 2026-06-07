@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import { ArrowLeft, Play, Pause, SkipBack, SkipForward, RotateCcw, Moon } from 'lucide-react';
+import { ArrowLeft, Play, Pause, SkipBack, SkipForward, RotateCcw, Moon, AlertTriangle } from 'lucide-react';
 import './Player.css';
 
 export default function Player() {
@@ -31,6 +31,7 @@ export default function Player() {
   const [hasAppliedSmartResume, setHasAppliedSmartResume] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [imgError, setImgError] = useState(false);
+  const [audioError, setAudioError] = useState(null);
 
   // Offline State & Resolvers
   const [audioUrl, setAudioUrl] = useState(null);
@@ -182,6 +183,7 @@ export default function Player() {
     };
 
     loadAudio();
+    setAudioError(null);
 
     return () => {
       active = false;
@@ -204,10 +206,15 @@ export default function Player() {
 
   const togglePlay = () => {
     if (audioRef.current) {
+      setAudioError(null);
       if (isPlaying) {
         audioRef.current.pause();
       } else {
-        audioRef.current.play();
+        audioRef.current.play().catch(e => {
+          console.error("Playback error:", e);
+          setAudioError("Unable to play this chapter. Please check your internet connection.");
+          setIsPlaying(false);
+        });
       }
       setIsPlaying(!isPlaying);
     }
@@ -221,19 +228,21 @@ export default function Player() {
 
   const nextChapter = () => {
     if (chapterIndex < chapters.length - 1) {
+      setAudioError(null);
       setHasAppliedSmartResume(false);
       setChapterIndex(chapterIndex + 1);
       setIsPlaying(true);
-      setTimeout(() => { if (audioRef.current) audioRef.current.play(); }, 100);
+      setTimeout(() => { if (audioRef.current) audioRef.current.play().catch(e => console.log(e)); }, 100);
     }
   };
 
   const prevChapter = () => {
     if (chapterIndex > 0) {
+      setAudioError(null);
       setHasAppliedSmartResume(false);
       setChapterIndex(chapterIndex - 1);
       setIsPlaying(true);
-      setTimeout(() => { if (audioRef.current) audioRef.current.play(); }, 100);
+      setTimeout(() => { if (audioRef.current) audioRef.current.play().catch(e => console.log(e)); }, 100);
     }
   };
 
@@ -313,6 +322,11 @@ export default function Player() {
         ref={audioRef} 
         src={audioUrl || undefined} 
         onTimeUpdate={handleTimeUpdate} 
+        onError={(e) => {
+          console.error("Audio player element error:", e);
+          setAudioError("Cannot load audio chapter. Please check your internet connection or sync the library.");
+          setIsPlaying(false);
+        }}
         onEnded={() => {
           // Award points for finishing a chapter!
           addPoints(10);
@@ -331,8 +345,46 @@ export default function Player() {
         }} 
       />
 
-      <div style={{ background: 'var(--surface-color)', padding: '2rem 3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', boxShadow: '0 -10px 40px rgba(0,0,0,0.05)', borderTopLeftRadius: '40px', borderTopRightRadius: '40px', zIndex: 10 }}>
+      <div style={{ background: 'var(--surface-color)', padding: '2rem 3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', boxShadow: '0 -10px 40px rgba(0,0,0,0.05)', borderTopLeftRadius: '40px', borderTopRightRadius: '40px', zIndex: 10, position: 'relative', width: '100%', boxSizing: 'border-box' }}>
         
+        {audioError && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'var(--surface-color)',
+            borderTopLeftRadius: '40px',
+            borderTopRightRadius: '40px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+            color: 'var(--text-main)',
+            textAlign: 'center',
+            zIndex: 20
+          }}>
+            <AlertTriangle size={40} color="var(--primary)" style={{ marginBottom: '0.75rem' }} />
+            <h3 style={{ margin: '0 0 0.5rem 0' }}>Cannot Play Chapter</h3>
+            <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.9rem', color: 'var(--text-muted)', maxWidth: '300px' }}>{audioError}</p>
+            <button 
+              className="btn-primary" 
+              onClick={() => {
+                setAudioError(null);
+                if (audioRef.current) {
+                  audioRef.current.load();
+                  audioRef.current.play().catch(err => {
+                    console.error("Retry playback failed:", err);
+                    setAudioError("Unable to play this chapter. Please check your internet connection.");
+                  });
+                  setIsPlaying(true);
+                }
+              }}
+              style={{ padding: '0.5rem 1.5rem', fontSize: '0.9rem' }}
+            >
+              Retry Playback
+            </button>
+          </div>
+        )}
         <div style={{ width: '100%', maxWidth: '800px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <span style={{ fontSize: '1rem', color: 'var(--text-muted)', width: '50px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatTime(currentTime)}</span>
           <div style={{ flex: 1, height: '12px', background: 'var(--border)', borderRadius: '6px', overflow: 'hidden', position: 'relative' }}>
