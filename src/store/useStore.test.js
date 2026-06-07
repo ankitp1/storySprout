@@ -59,4 +59,28 @@ describe('useStore', () => {
     useStore.getState().resetApprovedBooks('test_profile');
     expect(useStore.getState().approvedBooks['test_profile']).toEqual([]);
   });
+
+  it('should manage parental session time limits correctly', () => {
+    useStore.setState({
+      activeProfileId: 'test_profile',
+      sessionLimits: { 'test_profile': 1 }, // 1 minute = 60 seconds
+      sessionTimeUsed: 0,
+      isSessionLocked: false
+    });
+
+    // Incrementing by 30s should not lock
+    useStore.getState().incrementSessionTime(30);
+    expect(useStore.getState().sessionTimeUsed).toBe(30);
+    expect(useStore.getState().isSessionLocked).toBe(false);
+
+    // Incrementing by another 30s (total 60s) should lock
+    useStore.getState().incrementSessionTime(30);
+    expect(useStore.getState().sessionTimeUsed).toBe(60);
+    expect(useStore.getState().isSessionLocked).toBe(true);
+
+    // Unlocking should reset
+    useStore.getState().unlockSession();
+    expect(useStore.getState().sessionTimeUsed).toBe(0);
+    expect(useStore.getState().isSessionLocked).toBe(false);
+  });
 });

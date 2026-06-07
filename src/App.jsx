@@ -12,6 +12,7 @@ import Player from './pages/Player/Player';
 import BookCelebration from './pages/BookCelebration/BookCelebration';
 import AdminDashboard from './pages/Admin/Dashboard';
 import ProfileSelection from './pages/ProfileSelection/ProfileSelection';
+import SessionLockOverlay from './components/ParentalControl/SessionLockOverlay';
 
 
 
@@ -79,6 +80,7 @@ function App() {
   return (
     <Router>
       <div className="app-container">
+        <SessionLockOverlay />
         <div className="app-main">
           <Routes>
             <Route path="/profiles" element={<ProfileSelection />} />

@@ -30,7 +30,11 @@ const useStore = create(
         profiles: [...state.profiles, { id: Date.now().toString(), name, avatar, color }]
       })),
       
-      setActiveProfile: (profileId) => set({ activeProfileId: profileId }),
+      setActiveProfile: (profileId) => set({ 
+        activeProfileId: profileId,
+        sessionTimeUsed: 0,
+        isSessionLocked: false
+      }),
       
       updateProfile: (profileId, updates) => set((state) => ({
         profiles: state.profiles.map(p => p.id === profileId ? { ...p, ...updates } : p)
@@ -332,6 +336,38 @@ const useStore = create(
           console.error(`Failed to delete downloaded book ${bookId}:`, err);
         }
       },
+
+      // Session Limits
+      sessionLimits: {},
+      sessionTimeUsed: 0,
+      isSessionLocked: false,
+
+      setSessionLimit: (profileId, minutes) => set((state) => ({
+        sessionLimits: {
+          ...state.sessionLimits,
+          [profileId]: minutes
+        }
+      })),
+
+      incrementSessionTime: (seconds) => set((state) => {
+        if (!state.activeProfileId) return state;
+        const limitMinutes = state.sessionLimits[state.activeProfileId] || 0;
+        if (limitMinutes <= 0) return state; // No limit configured
+
+        const limitSeconds = limitMinutes * 60;
+        const newTimeUsed = state.sessionTimeUsed + seconds;
+        const shouldLock = newTimeUsed >= limitSeconds;
+
+        return {
+          sessionTimeUsed: newTimeUsed,
+          isSessionLocked: shouldLock
+        };
+      }),
+
+      unlockSession: () => set({
+        sessionTimeUsed: 0,
+        isSessionLocked: false
+      }),
     }),
     {
       name: 'rowans-library-storage', // name of the item in the storage (must be unique)

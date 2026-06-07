@@ -17,6 +17,8 @@ export default function Player() {
   const updateListeningStats = useStore(state => state.updateListeningStats);
   const incrementSessionCount = useStore(state => state.incrementSessionCount);
   const addPoints = useStore(state => state.addPoints);
+  const isSessionLocked = useStore(state => state.isSessionLocked);
+  const incrementSessionTime = useStore(state => state.incrementSessionTime);
 
   // Audio State
   const [chapterIndex, setChapterIndex] = useState(progress.chapterIndex || 0);
@@ -103,13 +105,22 @@ export default function Player() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (audioRef.current && isPlaying) {
+      if (audioRef.current && isPlaying && !isSessionLocked) {
         updateProgress(bookId, chapterIndex, audioRef.current.currentTime);
         updateListeningStats(bookId, 3);
+        incrementSessionTime(3); // Increment parental session time used
       }
     }, 3000);
     return () => clearInterval(interval);
-  }, [bookId, chapterIndex, isPlaying, updateProgress, updateListeningStats]);
+  }, [bookId, chapterIndex, isPlaying, isSessionLocked, updateProgress, updateListeningStats, incrementSessionTime]);
+
+  // Pause playback if session is locked
+  useEffect(() => {
+    if (isSessionLocked && isPlaying) {
+      setIsPlaying(false);
+      audioRef.current?.pause();
+    }
+  }, [isSessionLocked, isPlaying]);
 
   useEffect(() => {
     return () => {

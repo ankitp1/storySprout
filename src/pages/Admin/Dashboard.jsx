@@ -20,7 +20,7 @@ const getCleanSearchQuery = (title) => {
 };
 
 export default function Dashboard() {
-  const { books, addBook, removeBook, isAdmin, setAdminStatus, profiles, activeProfileId, resetApprovedBooks } = useStore();
+  const { books, addBook, removeBook, isAdmin, setAdminStatus, profiles, activeProfileId, resetApprovedBooks, sessionLimits, setSessionLimit } = useStore();
   const navigate = useNavigate();
   const [isSyncing, setIsSyncing] = useState(false);
   const [imgError, setImgError] = useState({});
@@ -168,6 +168,51 @@ export default function Dashboard() {
               Reset Book Approvals
             </button>
           )}
+        </div>
+      )}
+
+      {selectedProfileId && (
+        <div style={{ 
+          marginBottom: '2rem', 
+          background: 'var(--surface-color)', 
+          padding: '1.5rem', 
+          borderRadius: '16px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          border: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-xs)'
+        }}>
+          <div>
+            <h3 style={{ margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>Session Time Limit ⏳</h3>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              Limit how long books can be read in a single session before requiring the parent PIN.
+            </p>
+          </div>
+          <select
+            value={sessionLimits[selectedProfileId] || 0}
+            onChange={(e) => setSessionLimit(selectedProfileId, parseInt(e.target.value, 10))}
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: '8px',
+              border: '2px solid var(--border)',
+              background: 'var(--bg-color)',
+              color: 'var(--text-main)',
+              fontSize: '1rem',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              minWidth: '160px'
+            }}
+          >
+            <option value={0}>No Limit</option>
+            <option value={1}>1 Minute (Testing)</option>
+            <option value={15}>15 Minutes</option>
+            <option value={30}>30 Minutes</option>
+            <option value={45}>45 Minutes</option>
+            <option value={60}>60 Minutes</option>
+          </select>
         </div>
       )}
 
