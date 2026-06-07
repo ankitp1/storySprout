@@ -102,7 +102,7 @@ export const fetchBookCover = async (bookTitle) => {
 };
 
 export const fetchBookDetails = async (bookTitle) => {
-  const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GOOGLE_API_KEY;
   const cleanTitle = getCleanBookTitleForSearch(bookTitle);
   const parsed = parseTitleAndAuthor(cleanTitle);
 
