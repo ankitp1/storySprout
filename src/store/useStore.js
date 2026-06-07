@@ -111,6 +111,12 @@ const useStore = create(
           }
         };
       }),
+      resetApprovedBooks: (profileId) => set((state) => ({
+        approvedBooks: {
+          ...state.approvedBooks,
+          [profileId]: []
+        }
+      })),
 
       // Gamification
       points: {},

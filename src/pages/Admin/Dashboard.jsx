@@ -20,7 +20,7 @@ const getCleanSearchQuery = (title) => {
 };
 
 export default function Dashboard() {
-  const { books, addBook, removeBook, isAdmin, setAdminStatus, profiles, activeProfileId } = useStore();
+  const { books, addBook, removeBook, isAdmin, setAdminStatus, profiles, activeProfileId, resetApprovedBooks } = useStore();
   const navigate = useNavigate();
   const [isSyncing, setIsSyncing] = useState(false);
   const [imgError, setImgError] = useState({});
@@ -122,7 +122,7 @@ export default function Dashboard() {
       )}
 
       {profiles.length > 0 && (
-        <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           <h3 style={{ margin: 0 }}>Viewing Stats For:</h3>
           <select 
             value={selectedProfileId} 
@@ -142,6 +142,32 @@ export default function Dashboard() {
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
+          
+          {selectedProfileId && (
+            <button
+              onClick={() => {
+                const profile = profiles.find(p => p.id === selectedProfileId);
+                if (window.confirm(`Are you sure you want to reset all book approvals/permissions for ${profile ? profile.name : 'this profile'}? They will need a parent to approve books again.`)) {
+                  resetApprovedBooks(selectedProfileId);
+                  alert(`All approvals reset for ${profile ? profile.name : 'this profile'}.`);
+                }
+              }}
+              className="btn-secondary"
+              style={{ 
+                borderColor: 'var(--primary)', 
+                color: 'var(--primary)', 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                fontSize: '0.9rem',
+                padding: '0.5rem 1.25rem',
+                height: '44px'
+              }}
+            >
+              <Key size={16} />
+              Reset Book Approvals
+            </button>
+          )}
         </div>
       )}
 

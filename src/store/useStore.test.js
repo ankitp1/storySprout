@@ -49,4 +49,14 @@ describe('useStore', () => {
     expect(useStore.getState().points['test_profile']).toBe(50);
     expect(useStore.getState().unlockedAvatars['test_profile']).not.toContain('🦄');
   });
+
+  it('should reset approved books correctly', () => {
+    useStore.setState({ 
+      activeProfileId: 'test_profile', 
+      approvedBooks: { 'test_profile': ['book_1', 'book_2'] } 
+    });
+    
+    useStore.getState().resetApprovedBooks('test_profile');
+    expect(useStore.getState().approvedBooks['test_profile']).toEqual([]);
+  });
 });
