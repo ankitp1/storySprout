@@ -453,7 +453,35 @@ export default function Dashboard() {
                 <p style={{ lineHeight: 1.6, fontSize: '1.1rem', color: 'var(--text-main)' }}>
                   {selectedBookInfo.details.description || 'No description available for this book.'}
                 </p>
-                <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                {selectedBookInfo.details.recommendations && (
+                  <div style={{
+                    marginTop: '1rem',
+                    padding: '1rem',
+                    background: 'rgba(34, 197, 94, 0.08)',
+                    borderRadius: '12px',
+                    borderLeft: '4px solid #22c55e',
+                    fontSize: '0.95rem',
+                    lineHeight: 1.5,
+                    color: 'var(--text-main)'
+                  }}>
+                    <strong>💡 Parental Recommendation:</strong> {selectedBookInfo.details.recommendations}
+                  </div>
+                )}
+                {selectedBookInfo.details.safetyConcerns && (
+                  <div style={{
+                    marginTop: '1rem',
+                    padding: '1rem',
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    borderRadius: '12px',
+                    borderLeft: '4px solid #ef4444',
+                    fontSize: '0.95rem',
+                    lineHeight: 1.5,
+                    color: 'var(--text-main)'
+                  }}>
+                    <strong>⚠️ Content & Safety Warnings:</strong> {selectedBookInfo.details.safetyConcerns}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '2rem', marginTop: '1.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                   {selectedBookInfo.details.pageCount && <span>Pages: {selectedBookInfo.details.pageCount}</span>}
                   {selectedBookInfo.details.publishedDate && <span>Published: {selectedBookInfo.details.publishedDate}</span>}
                 </div>

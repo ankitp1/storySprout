@@ -57,6 +57,8 @@ describe('Google Books Fallback', () => {
       expect(details).toBeDefined();
       expect(details.description).toContain('Welcome to Random Story Name');
       expect(details.authors).toContain('Unknown Author');
+      expect(details.recommendations).toBe('Recommended for all young readers.');
+      expect(details.safetyConcerns).toBe('No safety or content warnings.');
     } finally {
       global.fetch = originalFetch;
     }

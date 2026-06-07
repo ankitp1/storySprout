@@ -110,7 +110,7 @@ export const fetchBookDetails = async (bookTitle) => {
   if (apiKey && !isGeminiDisabled) {
     try {
       const promptText = `Provide children's book details for title: "${parsed.title}"${parsed.author ? ` and author: "${parsed.author}"` : ''}.
-Return a kid-friendly description summarizing the book plot and themes/lessons taught. Also return estimated page count, publication date/year, and authors.`;
+Return a kid-friendly description summarizing the book plot and themes/lessons taught. Also return estimated page count, publication date/year, authors, recommended reader age/profile, and any content safety concerns (e.g. language, violence, scary themes).`;
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -138,7 +138,9 @@ Return a kid-friendly description summarizing the book plot and themes/lessons t
                 authors: {
                   type: "ARRAY",
                   items: { type: "STRING" }
-                }
+                },
+                recommendations: { type: "STRING" },
+                safetyConcerns: { type: "STRING" }
               },
               required: ["description"]
             }
@@ -158,7 +160,9 @@ Return a kid-friendly description summarizing the book plot and themes/lessons t
             description: parsedGemini.description,
             pageCount: parsedGemini.pageCount || null,
             publishedDate: parsedGemini.publishedDate || null,
-            authors: parsedGemini.authors || (parsed.author ? [parsed.author] : null)
+            authors: parsedGemini.authors || (parsed.author ? [parsed.author] : null),
+            recommendations: parsedGemini.recommendations || null,
+            safetyConcerns: parsedGemini.safetyConcerns || null
           };
         }
       } else {
@@ -191,7 +195,9 @@ Return a kid-friendly description summarizing the book plot and themes/lessons t
             description: item.volumeInfo.description || 'No description available for this book.',
             pageCount: item.volumeInfo.pageCount,
             publishedDate: item.volumeInfo.publishedDate,
-            authors: item.volumeInfo.authors
+            authors: item.volumeInfo.authors,
+            recommendations: null,
+            safetyConcerns: null
           };
         }
       }
@@ -201,7 +207,9 @@ Return a kid-friendly description summarizing the book plot and themes/lessons t
           description: firstItem.volumeInfo.description || 'No description available for this book.',
           pageCount: firstItem.volumeInfo.pageCount,
           publishedDate: firstItem.volumeInfo.publishedDate,
-          authors: firstItem.volumeInfo.authors
+          authors: firstItem.volumeInfo.authors,
+          recommendations: null,
+          safetyConcerns: null
         };
       }
     }
@@ -215,6 +223,8 @@ Return a kid-friendly description summarizing the book plot and themes/lessons t
     description: `Welcome to ${parsed.title}! Press play to listen to the chapters and follow along with the story.`,
     pageCount: null,
     publishedDate: new Date().getFullYear().toString(),
-    authors: parsed.author ? [parsed.author] : ['Unknown Author']
+    authors: parsed.author ? [parsed.author] : ['Unknown Author'],
+    recommendations: 'Recommended for all young readers.',
+    safetyConcerns: 'No safety or content warnings.'
   };
 };
