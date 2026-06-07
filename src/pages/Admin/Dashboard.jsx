@@ -52,8 +52,9 @@ export default function Dashboard() {
       setStatusMsg(`Found ${fetchedBooks.length} books. Fetching cover images...`);
       for (const book of fetchedBooks) {
         if (!book.hasCustomCover) {
-          const coverUrl = await fetchBookCover(getCleanSearchQuery(book.title));
+          const coverUrl = await fetchBookCover(book.title);
           if (coverUrl) book.coverUrl = coverUrl;
+          await new Promise(resolve => setTimeout(resolve, 300));
         }
         if (books.find(b => b.id === book.id)) removeBook(book.id);
         addBook(book);
