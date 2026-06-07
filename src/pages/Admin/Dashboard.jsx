@@ -9,6 +9,7 @@ import PINEntry from '../../components/ParentDashboard/PINEntry';
 import DashboardOverview from '../../components/ParentDashboard/DashboardOverview';
 import ListeningStats from '../../components/ParentDashboard/ListeningStats';
 import { triggerDeveloperEmail } from '../../lib/diagnostics';
+import { saveBookMetadataToCloud, fetchAllBookMetadataFromCloud } from '../../services/firebase';
 
 const getCleanSearchQuery = (title) => {
   if (!title) return '';
@@ -49,11 +50,44 @@ export default function Dashboard() {
         setIsSyncing(false);
         return;
       }
-      setStatusMsg(`Found ${fetchedBooks.length} books. Finalizing sync...`);
+
+      setStatusMsg('Fetching cached book details from cloud...');
+      const cloudMetadata = await fetchAllBookMetadataFromCloud();
+
+      setStatusMsg(`Syncing details for ${fetchedBooks.length} books...`);
       for (const book of fetchedBooks) {
+        const cached = cloudMetadata[book.id];
+        if (cached) {
+          book.details = cached.details;
+          if (!book.hasCustomCover && cached.coverUrl) {
+            book.coverUrl = cached.coverUrl;
+          }
+        } else {
+          setStatusMsg(`Fetching details for: ${book.title}...`);
+          const details = await fetchBookDetails(book.title);
+          let coverUrl = book.coverUrl;
+          if (!book.hasCustomCover) {
+            const fetchedCover = await fetchBookCover(book.title);
+            if (fetchedCover) coverUrl = fetchedCover;
+          }
+
+          const metadataToCache = {
+            details,
+            coverUrl: book.hasCustomCover ? null : coverUrl
+          };
+          await saveBookMetadataToCloud(book.id, metadataToCache);
+
+          book.details = details;
+          book.coverUrl = coverUrl;
+
+          // Small delay to rate limit API calls
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+
         if (books.find(b => b.id === book.id)) removeBook(book.id);
         addBook(book);
       }
+
       await setDriveCache(fetchedBooks);
       setStatusMsg(`Success! Synced ${fetchedBooks.length} books.`);
     } catch (err) {
@@ -64,6 +98,11 @@ export default function Dashboard() {
   };
 
   const openBookInsights = async (book) => {
+    if (book.details) {
+      setSelectedBookInfo({ ...book, loading: false });
+      return;
+    }
+
     setIsFetchingInfo(true);
     setSelectedBookInfo({ ...book, loading: true });
     try {
@@ -73,15 +112,21 @@ export default function Dashboard() {
         const fetchedCover = await fetchBookCover(book.title);
         if (fetchedCover) {
           updatedCoverUrl = fetchedCover;
-          const updatedBook = { ...book, coverUrl: fetchedCover };
-          removeBook(book.id);
-          addBook(updatedBook);
         }
       }
+
+      // Cache the on-demand fetched details
+      await saveBookMetadataToCloud(book.id, {
+        details,
+        coverUrl: book.hasCustomCover ? null : updatedCoverUrl
+      });
+
+      const updatedBook = { ...book, details, coverUrl: updatedCoverUrl };
+      removeBook(book.id);
+      addBook(updatedBook);
+
       setSelectedBookInfo({ 
-        ...book, 
-        coverUrl: updatedCoverUrl,
-        details, 
+        ...updatedBook, 
         loading: false 
       });
     } catch (err) {

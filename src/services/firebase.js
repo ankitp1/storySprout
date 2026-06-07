@@ -73,3 +73,33 @@ export const fetchProfilesFromCloud = async () => {
     return [];
   }
 };
+
+// Sync a single book's details/cover metadata to the cloud
+export const saveBookMetadataToCloud = async (bookId, metadata) => {
+  if (!db) return;
+  try {
+    const bookRef = doc(db, 'bookMetadata', bookId);
+    await setDoc(bookRef, {
+      ...metadata,
+      lastUpdated: Date.now()
+    }, { merge: true });
+  } catch (error) {
+    console.error(`Error saving book metadata ${bookId} to cloud:`, error);
+  }
+};
+
+// Fetch all book metadata documents from the cloud
+export const fetchAllBookMetadataFromCloud = async () => {
+  if (!db) return {};
+  try {
+    const querySnapshot = await getDocs(collection(db, 'bookMetadata'));
+    const metadataMap = {};
+    querySnapshot.forEach((doc) => {
+      metadataMap[doc.id] = doc.data();
+    });
+    return metadataMap;
+  } catch (error) {
+    console.error('Error fetching all book metadata from cloud:', error);
+    return {};
+  }
+};
