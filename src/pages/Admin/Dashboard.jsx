@@ -10,6 +10,7 @@ import DashboardOverview from '../../components/ParentDashboard/DashboardOvervie
 import ListeningStats from '../../components/ParentDashboard/ListeningStats';
 import { triggerDeveloperEmail } from '../../lib/diagnostics';
 import { saveBookMetadataToCloud, fetchAllBookMetadataFromCloud } from '../../services/firebase';
+import { extractYoutubeVideoId, fetchPodcastFeed } from '../../services/customMedia';
 
 const getCleanSearchQuery = (title) => {
   if (!title) return '';
@@ -33,6 +34,97 @@ export default function Dashboard() {
   const [selectedBookInfo, setSelectedBookInfo] = useState(null);
   const [isFetchingInfo, setIsFetchingInfo] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
+
+  // Custom Media State
+  const [customTitle, setCustomTitle] = useState('');
+  const [customUrl, setCustomUrl] = useState('');
+  const [customCover, setCustomCover] = useState('');
+  const [isAddingCustom, setIsAddingCustom] = useState(false);
+
+  const handleAddCustomMedia = async (e) => {
+    e.preventDefault();
+    if (!customUrl) return;
+    
+    setIsAddingCustom(true);
+    setStatusMsg('Parsing and adding custom source...');
+    
+    try {
+      const ytId = extractYoutubeVideoId(customUrl);
+      let bookObj = null;
+      
+      if (ytId) {
+        const finalTitle = customTitle.trim() || `YouTube Story (${ytId})`;
+        const finalCover = customCover.trim() || `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+        bookObj = {
+          id: `yt_${ytId}`,
+          title: finalTitle,
+          coverUrl: finalCover,
+          type: 'youtube',
+          hasCustomCover: true,
+          chapters: [
+            {
+              id: ytId,
+              name: 'Audio Track',
+              url: customUrl
+            }
+          ]
+        };
+      } else if (customUrl.toLowerCase().includes('.xml') || customUrl.toLowerCase().includes('rss') || customUrl.toLowerCase().includes('feed')) {
+        try {
+          const podcastData = await fetchPodcastFeed(customUrl);
+          bookObj = {
+            id: `podcast_${Date.now()}`,
+            title: customTitle.trim() || podcastData.title,
+            coverUrl: customCover.trim() || podcastData.coverUrl,
+            type: 'podcast',
+            hasCustomCover: true,
+            author: podcastData.author,
+            chapters: podcastData.episodes
+          };
+        } catch (podcastErr) {
+          throw new Error('Failed to parse podcast RSS feed. Make sure it is a valid XML RSS feed URL.');
+        }
+      } else {
+        const finalTitle = customTitle.trim() || 'Custom Audio';
+        const finalCover = customCover.trim() || 'https://placehold.co/400x600/e2e8f0/475569?text=Custom+Audio';
+        bookObj = {
+          id: `custom_${Date.now()}`,
+          title: finalTitle,
+          coverUrl: finalCover,
+          type: 'custom_audio',
+          hasCustomCover: true,
+          chapters: [
+            {
+              id: `track_${Date.now()}`,
+              name: 'Audio Link',
+              url: customUrl
+            }
+          ]
+        };
+      }
+      
+      setStatusMsg('Fetching insights from Gemini...');
+      const details = await fetchBookDetails(bookObj.title);
+      bookObj.details = details;
+      
+      await saveBookMetadataToCloud(bookObj.id, {
+        details,
+        coverUrl: bookObj.coverUrl
+      });
+      
+      addBook(bookObj);
+      
+      setCustomTitle('');
+      setCustomUrl('');
+      setCustomCover('');
+      setStatusMsg(`Successfully added "${bookObj.title}"!`);
+    } catch (err) {
+      console.error(err);
+      setStatusMsg(err.message || 'Failed to add custom media.');
+    }
+    
+    setIsAddingCustom(false);
+  };
 
   // Use the global isAdmin state, and if not admin, use PINEntry to set it
   if (!isAdmin) {
@@ -312,6 +404,54 @@ export default function Dashboard() {
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
         <ListeningStats profileId={selectedProfileId} />
+
+        <div style={{ background: 'var(--surface-color)', borderRadius: '16px', padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+          <h2 style={{ margin: '0 0 1.5rem 0' }}>Add Custom Media (YouTube, Podcast, MP3 Link)</h2>
+          <form onSubmit={handleAddCustomMedia} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontWeight: 'bold' }}>Title</label>
+              <input 
+                type="text" 
+                placeholder="e.g. Rowan's Science Adventure (Leave blank to auto-detect podcast title)" 
+                value={customTitle} 
+                onChange={(e) => setCustomTitle(e.target.value)}
+                style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: '1rem' }}
+              />
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontWeight: 'bold' }}>Source URL (YouTube, Podcast RSS Feed, or direct MP3 Link)</label>
+              <input 
+                type="url" 
+                placeholder="https://..." 
+                value={customUrl} 
+                onChange={(e) => setCustomUrl(e.target.value)}
+                required
+                style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: '1rem' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontWeight: 'bold' }}>Optional Cover Image URL (Will auto-resolve for YouTube/Podcasts)</label>
+              <input 
+                type="url" 
+                placeholder="https://..." 
+                value={customCover} 
+                onChange={(e) => setCustomCover(e.target.value)}
+                style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: '1rem' }}
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              className="btn-primary" 
+              disabled={isAddingCustom}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.5rem', padding: '0.75rem 2rem', fontSize: '1.1rem' }}
+            >
+              {isAddingCustom ? 'Adding...' : 'Add Custom Media'}
+            </button>
+          </form>
+        </div>
 
         <div style={{ background: 'var(--surface-color)', borderRadius: '16px', padding: '2rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>

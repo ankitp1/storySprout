@@ -24,7 +24,10 @@ vi.mock('../../store/useStore', () => {
     markBookAsRead: vi.fn(),
     updateListeningStats: vi.fn(),
     incrementSessionCount: vi.fn(),
-    addPoints: vi.fn()
+    addPoints: vi.fn(),
+    flushCloudSync: vi.fn(),
+    isSessionLocked: false,
+    incrementSessionTime: vi.fn()
   };
   return {
     default: vi.fn((selector) => selector ? selector(state) : state)

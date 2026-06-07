@@ -40,6 +40,10 @@ export default function Player() {
   
   const audioRef = useRef(null);
   const timerIntervalRef = useRef(null);
+
+  // YouTube player references
+  const ytPlayerRef = useRef(null);
+  const [ytPlayer, setYtPlayer] = useState(null);
   
   // Guard against missing book
   if (!book) {
@@ -54,15 +58,125 @@ export default function Player() {
   const chapters = book.chapters || [];
   const currentChapter = chapters[chapterIndex] || chapters[0];
 
-  // Smart Resume Logic
+  // YouTube Iframe API Loader and Manager
   useEffect(() => {
+    if (book.type !== 'youtube') return;
+
+    window.onYouTubeIframeAPIReady = () => {
+      initYtPlayer();
+    };
+
+    const initYtPlayer = () => {
+      const videoId = currentChapter?.id;
+      if (!videoId) return;
+
+      const placeholder = document.getElementById('yt-iframe-placeholder');
+      if (!placeholder) {
+        setTimeout(initYtPlayer, 100);
+        return;
+      }
+
+      ytPlayerRef.current = new window.YT.Player('yt-iframe-placeholder', {
+        videoId: videoId,
+        width: '100%',
+        height: '100%',
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          disablekb: 1,
+          fs: 0,
+          modestbranding: 1,
+          rel: 0,
+          showinfo: 0,
+          iv_load_policy: 3
+        },
+        events: {
+          onReady: (event) => {
+            setDuration(event.target.getDuration());
+            setYtPlayer(event.target);
+            
+            if (!hasAppliedSmartResume) {
+              const resumeTime = Math.max(0, progress.currentTime - 5);
+              event.target.seekTo(resumeTime, true);
+              setCurrentTime(resumeTime);
+              setHasAppliedSmartResume(true);
+            }
+          },
+          onStateChange: (event) => {
+            if (event.data === window.YT.PlayerState.PLAYING) {
+              setIsPlaying(true);
+              setAudioError(null);
+            } else if (event.data === window.YT.PlayerState.PAUSED) {
+              setIsPlaying(false);
+            } else if (event.data === window.YT.PlayerState.ENDED) {
+              addPoints(10);
+              setToastMsg('+10 Points! 🌱');
+              setTimeout(() => setToastMsg(''), 3000);
+
+              if (chapterIndex < chapters.length - 1) {
+                nextChapter();
+              } else {
+                addPoints(50);
+                setIsPlaying(false);
+                markBookAsRead(bookId);
+                navigate(`/book-celebration/${bookId}`);
+              }
+            }
+          },
+          onError: (event) => {
+            console.error('YouTube player error:', event.data);
+            setAudioError('Cannot load YouTube video. Please check your internet connection.');
+            setIsPlaying(false);
+          }
+        }
+      });
+    };
+
+    if (!window.YT || !window.YT.Player) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    } else {
+      initYtPlayer();
+    }
+
+    return () => {
+      if (ytPlayerRef.current && ytPlayerRef.current.destroy) {
+        try {
+          ytPlayerRef.current.destroy();
+        } catch (e) {
+          console.error('Error destroying YouTube player:', e);
+        }
+        ytPlayerRef.current = null;
+        setYtPlayer(null);
+      }
+    };
+  }, [bookId, chapterIndex, currentChapter?.id, hasAppliedSmartResume, progress.currentTime]);
+
+  // YouTube Position Tracker
+  useEffect(() => {
+    let interval = null;
+    if (book.type === 'youtube' && ytPlayer && isPlaying) {
+      interval = setInterval(() => {
+        try {
+          const curr = ytPlayer.getCurrentTime();
+          setCurrentTime(curr);
+        } catch (e) {}
+      }, 500);
+    }
+    return () => clearInterval(interval);
+  }, [book.type, ytPlayer, isPlaying]);
+
+  // Smart Resume Logic for standard Audio
+  useEffect(() => {
+    if (book.type === 'youtube') return;
     const audio = audioRef.current;
     if (!audio) return;
 
     const setAudioData = () => {
       setDuration(audio.duration || 0);
       if (!hasAppliedSmartResume) {
-        // Smart Resume: Rewind 5 seconds from saved progress
         const resumeTime = Math.max(0, progress.currentTime - 5);
         audio.currentTime = resumeTime;
         setCurrentTime(resumeTime);
@@ -72,7 +186,7 @@ export default function Player() {
 
     audio.addEventListener('loadedmetadata', setAudioData);
     return () => audio.removeEventListener('loadedmetadata', setAudioData);
-  }, [hasAppliedSmartResume, progress.currentTime]);
+  }, [hasAppliedSmartResume, progress.currentTime, book.type]);
 
   // Sleep Timer Logic
   useEffect(() => {
@@ -81,8 +195,15 @@ export default function Player() {
         setSleepTimerRemaining(prev => {
           if (prev <= 1) {
             setIsPlaying(false);
-            audioRef.current?.pause();
-            updateProgress(bookId, chapterIndex, audioRef.current?.currentTime || 0);
+            let currentPos = 0;
+            if (book.type === 'youtube') {
+              ytPlayer?.pauseVideo();
+              currentPos = ytPlayer ? ytPlayer.getCurrentTime() : 0;
+            } else {
+              audioRef.current?.pause();
+              currentPos = audioRef.current ? audioRef.current.currentTime : 0;
+            }
+            updateProgress(bookId, chapterIndex, currentPos);
             return null;
           }
           return prev - 1;
@@ -92,7 +213,7 @@ export default function Player() {
       clearInterval(timerIntervalRef.current);
     }
     return () => clearInterval(timerIntervalRef.current);
-  }, [sleepTimerRemaining, isPlaying, bookId, chapterIndex, updateProgress]);
+  }, [sleepTimerRemaining, isPlaying, bookId, chapterIndex, updateProgress, book.type, ytPlayer]);
 
   const setSleepTimer = (minutes) => {
     setSleepTimerRemaining(minutes * 60);
@@ -105,33 +226,56 @@ export default function Player() {
     incrementSessionCount(bookId);
   }, [bookId, incrementSessionCount]);
 
+  // Periodical progress stats update
   useEffect(() => {
     const interval = setInterval(() => {
-      if (audioRef.current && isPlaying && !isSessionLocked) {
-        updateProgress(bookId, chapterIndex, audioRef.current.currentTime);
+      if (isPlaying && !isSessionLocked) {
+        let currentPos = 0;
+        if (book.type === 'youtube' && ytPlayer) {
+          currentPos = ytPlayer.getCurrentTime();
+        } else if (audioRef.current) {
+          currentPos = audioRef.current.currentTime;
+        } else {
+          return;
+        }
+
+        updateProgress(bookId, chapterIndex, currentPos);
         updateListeningStats(bookId, 3);
-        incrementSessionTime(3); // Increment parental session time used
+        incrementSessionTime(3);
       }
     }, 3000);
     return () => clearInterval(interval);
-  }, [bookId, chapterIndex, isPlaying, isSessionLocked, updateProgress, updateListeningStats, incrementSessionTime]);
+  }, [bookId, chapterIndex, isPlaying, isSessionLocked, updateProgress, updateListeningStats, incrementSessionTime, book.type, ytPlayer]);
 
   // Pause playback if session is locked
   useEffect(() => {
     if (isSessionLocked && isPlaying) {
       setIsPlaying(false);
-      audioRef.current?.pause();
+      if (book.type === 'youtube') {
+        ytPlayer?.pauseVideo();
+      } else {
+        audioRef.current?.pause();
+      }
     }
-  }, [isSessionLocked, isPlaying]);
+  }, [isSessionLocked, isPlaying, book.type, ytPlayer]);
 
+  // Unmounting save progress
   useEffect(() => {
     return () => {
-      if (audioRef.current) {
-        updateProgress(bookId, chapterIndex, audioRef.current.currentTime);
-        flushCloudSync();
+      let currentPos = 0;
+      if (book.type === 'youtube' && ytPlayerRef.current) {
+        try {
+          currentPos = ytPlayerRef.current.getCurrentTime();
+        } catch (e) {}
+      } else if (audioRef.current) {
+        currentPos = audioRef.current.currentTime;
       }
+      if (currentPos > 0) {
+        updateProgress(bookId, chapterIndex, currentPos);
+      }
+      flushCloudSync();
     };
-  }, [bookId, chapterIndex, updateProgress, flushCloudSync]);
+  }, [bookId, chapterIndex, updateProgress, flushCloudSync, book.type]);
 
   // Load offline cover if available
   useEffect(() => {
@@ -160,6 +304,7 @@ export default function Player() {
 
   // Load offline audio if available
   useEffect(() => {
+    if (book.type === 'youtube') return;
     let active = true;
     let objectUrl = null;
 
@@ -177,7 +322,6 @@ export default function Player() {
           console.error('Failed to load offline audio:', e);
         }
 
-        // Fallback to online url
         setAudioUrl(`https://www.googleapis.com/drive/v3/files/${currentChapter.id}?alt=media&key=${import.meta.env.VITE_GOOGLE_API_KEY}&acknowledgeAbuse=true`);
       }
     };
@@ -191,10 +335,11 @@ export default function Player() {
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [bookId, chapterIndex, currentChapter?.id]);
+  }, [bookId, chapterIndex, currentChapter?.id, book.type]);
 
   // Reload audio element source when URL changes
   useEffect(() => {
+    if (book.type === 'youtube') return;
     const audio = audioRef.current;
     if (audio && audioUrl) {
       audio.load();
@@ -202,11 +347,20 @@ export default function Player() {
         audio.play().catch(e => console.log('Playback error:', e));
       }
     }
-  }, [audioUrl]);
+  }, [audioUrl, book.type]);
 
   const togglePlay = () => {
-    if (audioRef.current) {
-      setAudioError(null);
+    setAudioError(null);
+    if (book.type === 'youtube') {
+      if (ytPlayer) {
+        if (isPlaying) {
+          ytPlayer.pauseVideo();
+        } else {
+          ytPlayer.playVideo();
+        }
+        setIsPlaying(!isPlaying);
+      }
+    } else if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
       } else {
@@ -221,23 +375,38 @@ export default function Player() {
   };
 
   const rewind15 = () => {
-    if (audioRef.current) {
+    if (book.type === 'youtube') {
+      if (ytPlayer) {
+        const curr = ytPlayer.getCurrentTime();
+        ytPlayer.seekTo(Math.max(0, curr - 15), true);
+        setCurrentTime(Math.max(0, curr - 15));
+      }
+    } else if (audioRef.current) {
       audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 15);
     }
   };
 
   const restartChapter = () => {
-    if (audioRef.current) {
+    setAudioError(null);
+    if (book.type === 'youtube') {
+      if (ytPlayer) {
+        ytPlayer.seekTo(0, true);
+        setCurrentTime(0);
+      }
+    } else if (audioRef.current) {
       audioRef.current.currentTime = 0;
       setCurrentTime(0);
-      setAudioError(null);
     }
   };
 
   const handleSeek = (e) => {
     const time = parseFloat(e.target.value);
     setCurrentTime(time);
-    if (audioRef.current) {
+    if (book.type === 'youtube') {
+      if (ytPlayer) {
+        ytPlayer.seekTo(time, true);
+      }
+    } else if (audioRef.current) {
       audioRef.current.currentTime = time;
     }
   };
@@ -248,7 +417,9 @@ export default function Player() {
       setHasAppliedSmartResume(false);
       setChapterIndex(chapterIndex + 1);
       setIsPlaying(true);
-      setTimeout(() => { if (audioRef.current) audioRef.current.play().catch(e => console.log(e)); }, 100);
+      if (book.type !== 'youtube') {
+        setTimeout(() => { if (audioRef.current) audioRef.current.play().catch(e => console.log(e)); }, 100);
+      }
     }
   };
 
@@ -258,7 +429,9 @@ export default function Player() {
       setHasAppliedSmartResume(false);
       setChapterIndex(chapterIndex - 1);
       setIsPlaying(true);
-      setTimeout(() => { if (audioRef.current) audioRef.current.play().catch(e => console.log(e)); }, 100);
+      if (book.type !== 'youtube') {
+        setTimeout(() => { if (audioRef.current) audioRef.current.play().catch(e => console.log(e)); }, 100);
+      }
     }
   };
 
@@ -270,7 +443,6 @@ export default function Player() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Don't intercept if they are typing in an input (not applicable here, but good practice)
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
       switch(e.code) {
@@ -296,7 +468,7 @@ export default function Player() {
   }, [togglePlay, nextChapter, prevChapter]);
 
   const formatTime = (timeInSeconds) => {
-    if (isNaN(timeInSeconds)) return "0:00";
+    if (isNaN(timeInSeconds) || timeInSeconds === null) return "0:00";
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = Math.floor(timeInSeconds % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -323,43 +495,61 @@ export default function Player() {
             {toastMsg}
           </div>
         )}
-        <img 
-          src={offlineCoverUrl || (imgError ? `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}` : book.coverUrl)} 
-          alt={book.title} 
-          onError={() => setImgError(true)}
-          className="player-cover"
-          style={{ width: '100%', maxWidth: '260px', aspectRatio: '3/4', objectFit: 'cover', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', marginBottom: '1.5rem' }} 
-        />
+
+        {book.type === 'youtube' ? (
+          <div style={{
+            width: '100%',
+            maxWidth: '260px',
+            aspectRatio: '16/9',
+            borderRadius: '24px',
+            overflow: 'hidden',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+            marginBottom: '1.5rem',
+            background: '#000',
+            position: 'relative'
+          }}>
+            <div id="yt-iframe-placeholder" style={{ width: '100%', height: '100%' }}></div>
+          </div>
+        ) : (
+          <img 
+            src={offlineCoverUrl || (imgError ? `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}` : book.coverUrl)} 
+            alt={book.title} 
+            onError={() => setImgError(true)}
+            className="player-cover"
+            style={{ width: '100%', maxWidth: '260px', aspectRatio: '3/4', objectFit: 'cover', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', marginBottom: '1.5rem' }} 
+          />
+        )}
+
         <h1 style={{ margin: 0, fontSize: '2.5rem', textAlign: 'center', maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{book.title}</h1>
         <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>{currentChapter?.name || `Chapter ${chapterIndex + 1}`}</p>
       </div>
 
-      <audio 
-        ref={audioRef} 
-        src={audioUrl || undefined} 
-        onTimeUpdate={handleTimeUpdate} 
-        onError={(e) => {
-          console.error("Audio player element error:", e);
-          setAudioError("Cannot load audio chapter. Please check your internet connection or sync the library.");
-          setIsPlaying(false);
-        }}
-        onEnded={() => {
-          // Award points for finishing a chapter!
-          addPoints(10);
-          setToastMsg('+10 Points! 🌱');
-          setTimeout(() => setToastMsg(''), 3000);
-
-          if (chapterIndex < chapters.length - 1) {
-            nextChapter();
-          } else {
-            // Bonus points for finishing the book!
-            addPoints(50);
+      {book.type !== 'youtube' && (
+        <audio 
+          ref={audioRef} 
+          src={audioUrl || undefined} 
+          onTimeUpdate={handleTimeUpdate} 
+          onError={(e) => {
+            console.error("Audio player element error:", e);
+            setAudioError("Cannot load audio chapter. Please check your internet connection or sync the library.");
             setIsPlaying(false);
-            markBookAsRead(bookId);
-            navigate(`/book-celebration/${bookId}`);
-          }
-        }} 
-      />
+          }}
+          onEnded={() => {
+            addPoints(10);
+            setToastMsg('+10 Points! 🌱');
+            setTimeout(() => setToastMsg(''), 3000);
+
+            if (chapterIndex < chapters.length - 1) {
+              nextChapter();
+            } else {
+              addPoints(50);
+              setIsPlaying(false);
+              markBookAsRead(bookId);
+              navigate(`/book-celebration/${bookId}`);
+            }
+          }} 
+        />
+      )}
 
       <div style={{ background: 'var(--surface-color)', padding: '2rem 3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', boxShadow: '0 -10px 40px rgba(0,0,0,0.05)', borderTopLeftRadius: '40px', borderTopRightRadius: '40px', zIndex: 10, position: 'relative', width: '100%', boxSizing: 'border-box' }}>
         
@@ -386,7 +576,12 @@ export default function Player() {
               className="btn-primary" 
               onClick={() => {
                 setAudioError(null);
-                if (audioRef.current) {
+                if (book.type === 'youtube') {
+                  if (ytPlayer) {
+                    ytPlayer.playVideo();
+                    setIsPlaying(true);
+                  }
+                } else if (audioRef.current) {
                   audioRef.current.load();
                   audioRef.current.play().catch(err => {
                     console.error("Retry playback failed:", err);
