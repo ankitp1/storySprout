@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import localforage from 'localforage';
+import { 
+  saveOfflineAudio, 
+  deleteOfflineAudio, 
+  saveOfflineCover, 
+  deleteOfflineCover, 
+  checkBookDownloadStatus 
+} from '../lib/offlineDb';
 
 localforage.config({
   name: 'RowansLibraryDB',
@@ -226,6 +233,105 @@ const useStore = create(
           [profileId]: false
         }
       })),
+
+      // Offline Support State
+      downloadedBooks: {},
+      downloadProgress: {},
+      
+      initDownloads: async (booksList) => {
+        const statuses = {};
+        for (const book of booksList) {
+          const status = await checkBookDownloadStatus(book.id, book.chapters || []);
+          if (status) {
+            statuses[book.id] = true;
+          }
+        }
+        set({ downloadedBooks: statuses });
+      },
+
+      downloadBook: async (book) => {
+        const bookId = book.id;
+        set((state) => ({
+          downloadProgress: {
+            ...state.downloadProgress,
+            [bookId]: { current: 0, total: book.chapters.length, status: 'starting' }
+          }
+        }));
+
+        try {
+          // Download cover image
+          if (book.coverUrl && !book.coverUrl.startsWith('https://placehold.co')) {
+            try {
+              const coverRes = await fetch(book.coverUrl);
+              if (coverRes.ok) {
+                const coverBlob = await coverRes.blob();
+                await saveOfflineCover(bookId, coverBlob);
+              }
+            } catch (err) {
+              console.error('Failed to download cover:', err);
+            }
+          }
+
+          // Download chapters
+          let count = 0;
+          for (const ch of book.chapters) {
+            set((state) => ({
+              downloadProgress: {
+                ...state.downloadProgress,
+                [bookId]: { current: count, total: book.chapters.length, status: `Downloading chapter ${count + 1}...` }
+              }
+            }));
+
+            const res = await fetch(ch.url);
+            if (!res.ok) throw new Error(`Failed to download chapter ${ch.name}`);
+            const blob = await res.blob();
+            await saveOfflineAudio(bookId, ch.id, blob);
+            count++;
+          }
+
+          set((state) => ({
+            downloadedBooks: {
+              ...state.downloadedBooks,
+              [bookId]: true
+            },
+            downloadProgress: {
+              ...state.downloadProgress,
+              [bookId]: null
+            }
+          }));
+        } catch (err) {
+          console.error(`Download failed for book ${bookId}:`, err);
+          set((state) => ({
+            downloadProgress: {
+              ...state.downloadProgress,
+              [bookId]: { error: err.message || 'Download failed' }
+            }
+          }));
+        }
+      },
+
+      removeDownloadedBook: async (book) => {
+        const bookId = book.id;
+        try {
+          for (const ch of book.chapters) {
+            await deleteOfflineAudio(bookId, ch.id);
+          }
+          await deleteOfflineCover(bookId);
+
+          set((state) => ({
+            downloadedBooks: {
+              ...state.downloadedBooks,
+              [bookId]: false
+            },
+            downloadProgress: {
+              ...state.downloadProgress,
+              [bookId]: null
+            }
+          }));
+        } catch (err) {
+          console.error(`Failed to delete downloaded book ${bookId}:`, err);
+        }
+      },
     }),
     {
       name: 'rowans-library-storage', // name of the item in the storage (must be unique)

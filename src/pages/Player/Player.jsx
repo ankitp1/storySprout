@@ -28,6 +28,11 @@ export default function Player() {
   const [hasAppliedSmartResume, setHasAppliedSmartResume] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [imgError, setImgError] = useState(false);
+
+  // Offline State & Resolvers
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [offlineCoverUrl, setOfflineCoverUrl] = useState(null);
+  const isDownloaded = useStore(state => state.downloadedBooks?.[bookId]);
   
   const audioRef = useRef(null);
   const timerIntervalRef = useRef(null);
@@ -113,6 +118,76 @@ export default function Player() {
       }
     };
   }, [bookId, chapterIndex, updateProgress]);
+
+  // Load offline cover if available
+  useEffect(() => {
+    let active = true;
+    let objectUrl = null;
+    const loadCover = async () => {
+      if (isDownloaded) {
+        try {
+          const { getOfflineCover } = await import('../../lib/offlineDb');
+          const blob = await getOfflineCover(bookId);
+          if (blob && active) {
+            objectUrl = URL.createObjectURL(blob);
+            setOfflineCoverUrl(objectUrl);
+          }
+        } catch (e) {
+          console.error('Failed to load offline cover:', e);
+        }
+      }
+    };
+    loadCover();
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [isDownloaded, bookId]);
+
+  // Load offline audio if available
+  useEffect(() => {
+    let active = true;
+    let objectUrl = null;
+
+    const loadAudio = async () => {
+      if (currentChapter?.id) {
+        try {
+          const { getOfflineAudio } = await import('../../lib/offlineDb');
+          const blob = await getOfflineAudio(bookId, currentChapter.id);
+          if (blob && active) {
+            objectUrl = URL.createObjectURL(blob);
+            setAudioUrl(objectUrl);
+            return;
+          }
+        } catch (e) {
+          console.error('Failed to load offline audio:', e);
+        }
+
+        // Fallback to online url
+        setAudioUrl(`https://www.googleapis.com/drive/v3/files/${currentChapter.id}?alt=media&key=${import.meta.env.VITE_GOOGLE_API_KEY}&acknowledgeAbuse=true`);
+      }
+    };
+
+    loadAudio();
+
+    return () => {
+      active = false;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [bookId, chapterIndex, currentChapter?.id]);
+
+  // Reload audio element source when URL changes
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio && audioUrl) {
+      audio.load();
+      if (isPlaying) {
+        audio.play().catch(e => console.log('Playback error:', e));
+      }
+    }
+  }, [audioUrl]);
 
   const togglePlay = () => {
     if (audioRef.current) {
@@ -211,7 +286,7 @@ export default function Player() {
           </div>
         )}
         <img 
-          src={imgError ? `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}` : book.coverUrl} 
+          src={offlineCoverUrl || (imgError ? `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}` : book.coverUrl)} 
           alt={book.title} 
           onError={() => setImgError(true)}
           className="player-cover"
@@ -223,7 +298,7 @@ export default function Player() {
 
       <audio 
         ref={audioRef} 
-        src={currentChapter?.id ? `https://www.googleapis.com/drive/v3/files/${currentChapter.id}?alt=media&key=${import.meta.env.VITE_GOOGLE_API_KEY}&acknowledgeAbuse=true` : undefined} 
+        src={audioUrl || undefined} 
         onTimeUpdate={handleTimeUpdate} 
         onEnded={() => {
           // Award points for finishing a chapter!

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import { Play, Settings, Users, Search, Lock, Unlock, HelpCircle, Sun, Moon } from 'lucide-react';
+import { Play, Settings, Users, Search, Lock, Unlock, HelpCircle, Sun, Moon, Download, Trash2 } from 'lucide-react';
 import PINEntry from '../../components/ParentDashboard/PINEntry';
 import OnboardingTour from '../../components/OnboardingTour';
 
@@ -22,8 +22,54 @@ const formatTime = (timeInSeconds) => {
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 };
 
-const BookCard = ({ book, progress, readBooks, onBookClick, isGrid = false, ratings, ratio = '2/3', dataTour }) => {
+const BookCard = ({ 
+  book, 
+  progress, 
+  readBooks, 
+  onBookClick, 
+  isGrid = false, 
+  ratings, 
+  ratio = '2/3', 
+  dataTour,
+  isDownloaded,
+  isDownloading,
+  downloadProgress,
+  downloadBook,
+  removeDownloadedBook
+}) => {
   const [imgError, setImgError] = useState(false);
+  const [offlineCoverUrl, setOfflineCoverUrl] = useState(null);
+
+  React.useEffect(() => {
+    let active = true;
+    let objectUrl = null;
+    const loadOfflineCover = async () => {
+      if (isDownloaded) {
+        try {
+          const { getOfflineCover } = await import('../../lib/offlineDb');
+          const blob = await getOfflineCover(book.id);
+          if (blob && active) {
+            objectUrl = URL.createObjectURL(blob);
+            setOfflineCoverUrl(objectUrl);
+          }
+        } catch (e) {
+          console.error('Error loading offline cover:', e);
+        }
+      } else {
+        setOfflineCoverUrl(null);
+      }
+    };
+    loadOfflineCover();
+    return () => {
+      active = false;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [isDownloaded, book.id]);
+
+  const coverSrc = offlineCoverUrl || (imgError ? `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}` : book.coverUrl);
+
   return (
     <div 
       onClick={() => onBookClick(book)}
@@ -57,11 +103,50 @@ const BookCard = ({ book, progress, readBooks, onBookClick, isGrid = false, rati
         position: 'relative'
       }}>
         <img 
-          src={imgError ? `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}` : book.coverUrl} 
+          src={coverSrc} 
           alt={book.title} 
           onError={() => setImgError(true)}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
+        
+        {/* Download Button Overlay */}
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isDownloaded) {
+              if (window.confirm(`Remove offline download for "${book.title}"?`)) {
+                removeDownloadedBook(book);
+              }
+            } else if (!isDownloading) {
+              downloadBook(book);
+            }
+          }}
+          style={{
+            position: 'absolute', top: '10px', left: '10px',
+            background: isDownloaded ? 'rgba(76, 175, 80, 0.95)' : isDownloading ? 'var(--primary)' : 'rgba(0,0,0,0.5)',
+            color: 'white', width: '36px', height: '36px',
+            borderRadius: '50%', fontSize: '0.8rem', fontWeight: 'bold',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 10,
+            cursor: 'pointer',
+            transition: 'transform 0.2s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          title={isDownloaded ? "Delete offline download" : isDownloading ? `Downloading: ${downloadProgress?.status || ''}` : "Download for offline listening"}
+        >
+          {isDownloading ? (
+            <span style={{ fontSize: '0.7rem' }}>
+              {Math.round((downloadProgress.current / downloadProgress.total) * 100)}%
+            </span>
+          ) : isDownloaded ? (
+            <Trash2 size={16} />
+          ) : (
+            <Download size={16} />
+          )}
+        </div>
+
         {/* Play Button Overlay */}
         <div style={{
           position: 'absolute',
@@ -155,6 +240,31 @@ export default function Library() {
   const isDarkMode = useStore(state => state.isDarkMode);
   const toggleDarkMode = useStore(state => state.toggleDarkMode);
   const navigate = useNavigate();
+
+  // Offline support
+  const downloadedBooks = useStore(state => state.downloadedBooks || {});
+  const downloadProgress = useStore(state => state.downloadProgress || {});
+  const initDownloads = useStore(state => state.initDownloads);
+  const downloadBook = useStore(state => state.downloadBook);
+  const removeDownloadedBook = useStore(state => state.removeDownloadedBook);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  React.useEffect(() => {
+    if (books && books.length > 0) {
+      initDownloads(books);
+    }
+  }, [books, initDownloads]);
+
+  React.useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   
   const completedTours = useStore(state => state.completedTours || {});
   const completeTour = useStore(state => state.completeTour);
@@ -262,6 +372,11 @@ export default function Library() {
   // Filter & Sort Logic
   const processedBooks = books
     .filter(book => {
+      // Offline mode: only show downloaded books
+      if (isOffline && !downloadedBooks[book.id]) {
+        return false;
+      }
+
       // 1. Search Query
       if (searchQuery && !book.title.toLowerCase().includes(searchQuery.toLowerCase()) && !book.author?.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
@@ -271,6 +386,7 @@ export default function Library() {
       if (activeFilter === 'Completed' && !readBooks.includes(book.id)) return false;
       if (activeFilter === 'Favorites' && (ratings[book.id] || 0) < 3) return false;
       if (activeFilter === 'Series' && !book.series) return false;
+      if (activeFilter === 'Downloaded' && !downloadedBooks[book.id]) return false;
       
       return true;
     })
@@ -390,6 +506,25 @@ export default function Library() {
         </div>
       </div>
 
+      {isOffline && (
+        <div style={{
+          background: 'rgba(255, 107, 107, 0.15)',
+          border: '2px dashed var(--primary)',
+          color: 'var(--text-main)',
+          padding: '1rem',
+          borderRadius: '16px',
+          marginBottom: '2rem',
+          textAlign: 'center',
+          fontWeight: 'bold',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem'
+        }}>
+          <span>📶 You are offline! Showing only downloaded books.</span>
+        </div>
+      )}
+
       {/* Discovery & Filters Toolbar */}
       <div style={{ marginBottom: '3rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         
@@ -434,7 +569,7 @@ export default function Library() {
 
         {/* Filter Pills Row */}
         <div data-tour="filters" style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-          {['All', 'Completed', 'Favorites', 'Series'].map(filter => (
+          {['All', 'Completed', 'Favorites', 'Series', 'Downloaded'].map(filter => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
@@ -482,7 +617,21 @@ export default function Library() {
                   gap: '2.5rem'
                 }}>
                   {processedBooks.map((book, idx) => (
-                    <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} ratings={ratings} onBookClick={handleBookClick} isGrid={true} dataTour={idx === 0 ? "book-card" : undefined} />
+                    <BookCard 
+                      key={book.id} 
+                      book={book} 
+                      progress={progress} 
+                      readBooks={readBooks} 
+                      ratings={ratings} 
+                      onBookClick={handleBookClick} 
+                      isGrid={true} 
+                      dataTour={idx === 0 ? "book-card" : undefined} 
+                      isDownloaded={!!downloadedBooks[book.id]}
+                      isDownloading={!!downloadProgress[book.id]}
+                      downloadProgress={downloadProgress[book.id]}
+                      downloadBook={downloadBook}
+                      removeDownloadedBook={removeDownloadedBook}
+                    />
                   ))}
                 </div>
               )}
@@ -503,7 +652,19 @@ export default function Library() {
                   }}>
                     {seriesBooks.map((book, idx) => (
                       <div key={book.id} style={{ scrollSnapAlign: 'start' }}>
-                        <BookCard book={book} progress={progress} readBooks={readBooks} ratings={ratings} onBookClick={handleBookClick} dataTour={idx === 0 ? "book-card" : undefined} />
+                        <BookCard 
+                          book={book} 
+                          progress={progress} 
+                          readBooks={readBooks} 
+                          ratings={ratings} 
+                          onBookClick={handleBookClick} 
+                          dataTour={idx === 0 ? "book-card" : undefined} 
+                          isDownloaded={!!downloadedBooks[book.id]}
+                          isDownloading={!!downloadProgress[book.id]}
+                          downloadProgress={downloadProgress[book.id]}
+                          downloadBook={downloadBook}
+                          removeDownloadedBook={removeDownloadedBook}
+                        />
                       </div>
                     ))}
                   </div>
@@ -519,7 +680,21 @@ export default function Library() {
                     gap: '2.5rem'
                   }}>
                     {standaloneBooks.map((book, idx) => (
-                      <BookCard key={book.id} book={book} progress={progress} readBooks={readBooks} ratings={ratings} onBookClick={handleBookClick} isGrid={true} dataTour={idx === 0 ? "book-card" : undefined} />
+                      <BookCard 
+                        key={book.id} 
+                        book={book} 
+                        progress={progress} 
+                        readBooks={readBooks} 
+                        ratings={ratings} 
+                        onBookClick={handleBookClick} 
+                        isGrid={true} 
+                        dataTour={idx === 0 ? "book-card" : undefined} 
+                        isDownloaded={!!downloadedBooks[book.id]}
+                        isDownloading={!!downloadProgress[book.id]}
+                        downloadProgress={downloadProgress[book.id]}
+                        downloadBook={downloadBook}
+                        removeDownloadedBook={removeDownloadedBook}
+                      />
                     ))}
                   </div>
                 </div>
