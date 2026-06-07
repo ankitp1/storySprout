@@ -13,7 +13,10 @@ StorySprout is a 100% frontend, legacy-friendly (iOS 9.3.5 compatible) web appli
 - **Book Celebrations & Ratings**: When a child finishes a book, they get a confetti celebration and a 5-star rating widget!
 - **Library Discovery**: A kid-friendly search bar, filter pills (Completed, Favorites, Series), and sorting (A-Z, Last Played) make browsing easy for growing libraries.
 - **Accessibility Enhancements**: Includes full keyboard navigation (`Space` to play/pause, Arrows to skip) and a High-Contrast mode toggle for children with vision challenges.
-- **Parent Dashboard**: Secured behind a PIN (`1234`), the dashboard displays detailed listening stats, completed books, total listening time, and discussion questions (synced from a live Google Sheet) for the active child profile.
+- **Parental Session Limits**: Parents can set a maximum listening limit per session (defaults to 60 minutes). Once reached, the screen locks and requires a parent PIN to resume.
+- **Profile Reset & Custom Access**: Parent dashboard includes settings to reset all custom book access permissions for any child profile in one click.
+- **Offline Support**: Entirely local state persistence and offline capabilities using IndexedDB / localForage, ensuring the app works without an active internet connection.
+- **Parent Dashboard**: Secured behind a PIN (`1234`), the dashboard displays detailed listening stats, completed books, total listening time, custom book approval/restriction toggles, and discussion questions (synced from a live Google Sheet) for the active child profile.
 
 ## 🚀 Tech Stack
 

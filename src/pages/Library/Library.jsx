@@ -323,13 +323,13 @@ export default function Library() {
     {
       selector: '[data-tour="parent-zone"]',
       title: "Parent Zone 🔐",
-      content: "Settings are protected by a secure 4-digit PIN. Tap this gear to sync new audiobooks, view detailed listening statistics, check reviews, and approve/restrict books.",
+      content: "Protected by a secure 4-digit PIN. Tap this gear to sync audiobooks, check stats/reviews, approve/restrict books, manage session time limits (defaults to 60 mins), or reset profile permissions.",
       icon: "🛡️"
     },
     {
       selector: '[data-tour="book-card"]',
       title: "Let's Start Listening!",
-      content: "Tap any book to open the playful audio player. Features include smart resume, sleep timer, and kid-friendly discussion questions!",
+      content: "Tap any book to open the playful audio player. Features include smart resume, sleep timer, offline play support, and kid-friendly discussion questions!",
       icon: "🎧"
     }
   ];
