@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import { ArrowLeft, Play, Pause, SkipBack, SkipForward, RotateCcw, Moon, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Play, Pause, SkipBack, SkipForward, RotateCcw, Moon, AlertTriangle, Rewind } from 'lucide-react';
 import './Player.css';
 
 export default function Player() {
@@ -226,6 +226,22 @@ export default function Player() {
     }
   };
 
+  const restartChapter = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      setCurrentTime(0);
+      setAudioError(null);
+    }
+  };
+
+  const handleSeek = (e) => {
+    const time = parseFloat(e.target.value);
+    setCurrentTime(time);
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+    }
+  };
+
   const nextChapter = () => {
     if (chapterIndex < chapters.length - 1) {
       setAudioError(null);
@@ -387,9 +403,23 @@ export default function Player() {
         )}
         <div style={{ width: '100%', maxWidth: '800px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <span style={{ fontSize: '1rem', color: 'var(--text-muted)', width: '50px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatTime(currentTime)}</span>
-          <div style={{ flex: 1, height: '12px', background: 'var(--border)', borderRadius: '6px', overflow: 'hidden', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, background: 'var(--primary)', width: `${duration ? (currentTime / duration) * 100 : 0}%`, transition: 'width 0.1s linear' }} />
-          </div>
+          <input 
+            type="range"
+            min={0}
+            max={duration || 1}
+            value={currentTime}
+            onChange={handleSeek}
+            style={{
+              flex: 1,
+              height: '12px',
+              borderRadius: '6px',
+              background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${duration ? (currentTime / duration) * 100 : 0}%, var(--border) ${duration ? (currentTime / duration) * 100 : 0}%, var(--border) 100%)`,
+              outline: 'none',
+              cursor: 'pointer',
+              WebkitAppearance: 'none'
+            }}
+            className="player-slider"
+          />
           <span style={{ fontSize: '1rem', color: 'var(--text-muted)', width: '50px', fontFamily: 'var(--font-mono)' }}>{formatTime(duration)}</span>
         </div>
 
@@ -410,13 +440,13 @@ export default function Player() {
         </div>
 
         <div className="player-controls-container">
-            <button 
-              onClick={rewind15}
-              className="btn-icon player-btn-secondary" 
-              title="Rewind 15 Seconds"
-            >
-              <RotateCcw size={32} color="var(--text-muted)" />
-            </button>
+          <button 
+            onClick={restartChapter}
+            className="btn-icon player-btn-secondary" 
+            title="Restart Chapter"
+          >
+            <RotateCcw size={32} color="var(--text-main)" />
+          </button>
 
           <button 
             onClick={prevChapter}
@@ -445,8 +475,13 @@ export default function Player() {
             <SkipForward size={32} color="var(--text-main)" />
           </button>
 
-            {/* Placeholder to balance the rewind button */}
-            <div className="player-btn-placeholder"></div>
+          <button 
+            onClick={rewind15}
+            className="btn-icon player-btn-secondary" 
+            title="Rewind 15 Seconds"
+          >
+            <Rewind size={32} color="var(--text-main)" />
+          </button>
         </div>
       </div>
     </div>

@@ -114,3 +114,45 @@
     height: 24px !important;
   }
 }
+
+/* Custom slider styles for kid-friendly dragging */
+.player-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border);
+  height: 12px;
+  border-radius: 6px;
+  outline: none;
+}
+
+.player-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid white;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.player-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.player-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid white;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.player-slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
