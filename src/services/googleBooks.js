@@ -100,11 +100,72 @@ export const fetchBookCover = async (bookTitle) => {
 };
 
 export const fetchBookDetails = async (bookTitle) => {
+  const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+  const cleanTitle = getCleanBookTitleForSearch(bookTitle);
+  const parsed = parseTitleAndAuthor(cleanTitle);
+
+  // Try Gemini first
+  if (apiKey) {
+    try {
+      const promptText = `Provide children's book details for title: "${parsed.title}"${parsed.author ? ` and author: "${parsed.author}"` : ''}.
+Return a kid-friendly description summarizing the book plot and themes/lessons taught. Also return estimated page count, publication date/year, and authors.`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: promptText
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                description: { type: "STRING" },
+                pageCount: { type: "INTEGER" },
+                publishedDate: { type: "STRING" },
+                authors: {
+                  type: "ARRAY",
+                  items: { type: "STRING" }
+                }
+              },
+              required: ["description"]
+            }
+          }
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          const parsedGemini = JSON.parse(text);
+          return {
+            description: parsedGemini.description,
+            pageCount: parsedGemini.pageCount || null,
+            publishedDate: parsedGemini.publishedDate || null,
+            authors: parsedGemini.authors || (parsed.author ? [parsed.author] : null)
+          };
+        }
+      } else {
+        console.warn(`Gemini API returned status ${response.status}. Falling back to Google Books API.`);
+      }
+    } catch (geminiErr) {
+      console.warn("Failed to fetch details from Gemini, falling back to Google Books:", geminiErr);
+    }
+  }
+
+  // Fallback to Google Books API (original logic)
   try {
-    const cleanTitle = getCleanBookTitleForSearch(bookTitle);
-    const parsed = parseTitleAndAuthor(cleanTitle);
-    
-    // First attempt: try with intitle:
     let query = `intitle:${encodeURIComponent(parsed.title)}`;
     if (parsed.author) {
       query += `+inauthor:${encodeURIComponent(parsed.author)}`;
@@ -113,7 +174,6 @@ export const fetchBookDetails = async (bookTitle) => {
     let res = await fetchWithRetry(`https://www.googleapis.com/books/v1/volumes?q=${query}`);
     let data = res && res.ok ? await res.json() : null;
     
-    // Second attempt fallback: general query search
     if (!data || !data.items || data.items.length === 0) {
       res = await fetchWithRetry(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(parsed.title)}`);
       data = res && res.ok ? await res.json() : null;
@@ -130,7 +190,6 @@ export const fetchBookDetails = async (bookTitle) => {
           };
         }
       }
-      // Return metadata of the first matching item as fallback
       const firstItem = data.items[0];
       if (firstItem.volumeInfo) {
         return {
@@ -143,7 +202,7 @@ export const fetchBookDetails = async (bookTitle) => {
     }
     return null;
   } catch (err) {
-    console.error('Failed to fetch book details:', err);
+    console.error('Failed to fetch book details from Google Books:', err);
     return null;
   }
 };

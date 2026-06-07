@@ -49,13 +49,8 @@ export default function Dashboard() {
         setIsSyncing(false);
         return;
       }
-      setStatusMsg(`Found ${fetchedBooks.length} books. Fetching cover images...`);
+      setStatusMsg(`Found ${fetchedBooks.length} books. Finalizing sync...`);
       for (const book of fetchedBooks) {
-        if (!book.hasCustomCover) {
-          const coverUrl = await fetchBookCover(book.title);
-          if (coverUrl) book.coverUrl = coverUrl;
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
         if (books.find(b => b.id === book.id)) removeBook(book.id);
         addBook(book);
       }
@@ -73,7 +68,22 @@ export default function Dashboard() {
     setSelectedBookInfo({ ...book, loading: true });
     try {
       const details = await fetchBookDetails(book.title);
-      setSelectedBookInfo({ ...book, details, loading: false });
+      let updatedCoverUrl = book.coverUrl;
+      if (!book.hasCustomCover) {
+        const fetchedCover = await fetchBookCover(book.title);
+        if (fetchedCover) {
+          updatedCoverUrl = fetchedCover;
+          const updatedBook = { ...book, coverUrl: fetchedCover };
+          removeBook(book.id);
+          addBook(updatedBook);
+        }
+      }
+      setSelectedBookInfo({ 
+        ...book, 
+        coverUrl: updatedCoverUrl,
+        details, 
+        loading: false 
+      });
     } catch (err) {
       console.error(err);
       setSelectedBookInfo({ ...book, error: 'Failed to load details', loading: false });
