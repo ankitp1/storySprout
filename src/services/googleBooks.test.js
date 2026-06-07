@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getCleanBookTitleForSearch, parseTitleAndAuthor } from './googleBooks';
+import { getCleanBookTitleForSearch, parseTitleAndAuthor, fetchBookDetails } from './googleBooks';
 
 describe('Google Books Title Cleaning', () => {
   it('should clean repeating title patterns from folder names', () => {
@@ -44,5 +44,21 @@ describe('Google Books Title Cleaning', () => {
     const parsed = parseTitleAndAuthor(cleanTitle);
     expect(parsed.title).toBe('Charlotte\'s Web');
     expect(parsed.author).toBe('');
+  });
+});
+
+describe('Google Books Fallback', () => {
+  it('should return fallback local details if API requests fail or are rate-limited', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = () => Promise.reject(new Error('Network failure'));
+    
+    try {
+      const details = await fetchBookDetails('Random Story Name');
+      expect(details).toBeDefined();
+      expect(details.description).toContain('Welcome to Random Story Name');
+      expect(details.authors).toContain('Unknown Author');
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 });

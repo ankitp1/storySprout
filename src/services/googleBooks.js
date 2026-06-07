@@ -1,3 +1,5 @@
+let isGeminiDisabled = false;
+
 export const getCleanBookTitleForSearch = (title) => {
   if (!title) return '';
   let clean = title;
@@ -104,8 +106,8 @@ export const fetchBookDetails = async (bookTitle) => {
   const cleanTitle = getCleanBookTitleForSearch(bookTitle);
   const parsed = parseTitleAndAuthor(cleanTitle);
 
-  // Try Gemini first
-  if (apiKey) {
+  // Try Gemini first (if not disabled by a prior 403 Forbidden)
+  if (apiKey && !isGeminiDisabled) {
     try {
       const promptText = `Provide children's book details for title: "${parsed.title}"${parsed.author ? ` and author: "${parsed.author}"` : ''}.
 Return a kid-friendly description summarizing the book plot and themes/lessons taught. Also return estimated page count, publication date/year, and authors.`;
@@ -144,7 +146,10 @@ Return a kid-friendly description summarizing the book plot and themes/lessons t
         })
       });
 
-      if (response.ok) {
+      if (response.status === 403) {
+        console.warn('Gemini API returned status 403 (Forbidden). Disabling Gemini for this session to prevent repeated requests.');
+        isGeminiDisabled = true;
+      } else if (response.ok) {
         const result = await response.json();
         const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
         if (text) {
@@ -164,7 +169,7 @@ Return a kid-friendly description summarizing the book plot and themes/lessons t
     }
   }
 
-  // Fallback to Google Books API (original logic)
+  // Fallback to Google Books API
   try {
     let query = `intitle:${encodeURIComponent(parsed.title)}`;
     if (parsed.author) {
@@ -200,9 +205,16 @@ Return a kid-friendly description summarizing the book plot and themes/lessons t
         };
       }
     }
-    return null;
   } catch (err) {
     console.error('Failed to fetch book details from Google Books:', err);
-    return null;
   }
+
+  // Final fallback: Local placeholder details to avoid crashes or infinite network loops
+  console.log(`Failed to fetch details from APIs for ${parsed.title}. Generating local placeholder details.`);
+  return {
+    description: `Welcome to ${parsed.title}! Press play to listen to the chapters and follow along with the story.`,
+    pageCount: null,
+    publishedDate: new Date().getFullYear().toString(),
+    authors: parsed.author ? [parsed.author] : ['Unknown Author']
+  };
 };
