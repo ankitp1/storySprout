@@ -57,7 +57,7 @@ export default function Dashboard() {
       setStatusMsg(`Syncing details for ${fetchedBooks.length} books...`);
       for (const book of fetchedBooks) {
         const cached = cloudMetadata[book.id];
-        if (cached) {
+        if (cached && cached.details && cached.details.recommendations !== undefined) {
           book.details = cached.details;
           if (!book.hasCustomCover && cached.coverUrl) {
             book.coverUrl = cached.coverUrl;
@@ -98,7 +98,7 @@ export default function Dashboard() {
   };
 
   const openBookInsights = async (book) => {
-    if (book.details) {
+    if (book.details && book.details.recommendations !== undefined) {
       setSelectedBookInfo({ ...book, loading: false });
       return;
     }
