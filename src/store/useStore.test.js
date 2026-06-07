@@ -83,4 +83,21 @@ describe('useStore', () => {
     expect(useStore.getState().sessionTimeUsed).toBe(0);
     expect(useStore.getState().isSessionLocked).toBe(false);
   });
+
+  it('should default session limit to 60 minutes if not set', () => {
+    useStore.setState({
+      activeProfileId: 'test_profile',
+      sessionLimits: {}, // empty means undefined for test_profile
+      sessionTimeUsed: 0,
+      isSessionLocked: false
+    });
+
+    // 59 minutes (3540 seconds) should not lock
+    useStore.getState().incrementSessionTime(3540);
+    expect(useStore.getState().isSessionLocked).toBe(false);
+
+    // 60 minutes (3600 seconds total) should lock
+    useStore.getState().incrementSessionTime(60);
+    expect(useStore.getState().isSessionLocked).toBe(true);
+  });
 });

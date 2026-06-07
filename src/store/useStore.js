@@ -351,7 +351,9 @@ const useStore = create(
 
       incrementSessionTime: (seconds) => set((state) => {
         if (!state.activeProfileId) return state;
-        const limitMinutes = state.sessionLimits[state.activeProfileId] || 0;
+        const limitMinutes = state.sessionLimits[state.activeProfileId] !== undefined
+          ? state.sessionLimits[state.activeProfileId]
+          : 60; // Default to 60 minutes if not set
         if (limitMinutes <= 0) return state; // No limit configured
 
         const limitSeconds = limitMinutes * 60;

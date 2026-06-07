@@ -192,7 +192,7 @@ export default function Dashboard() {
             </p>
           </div>
           <select
-            value={sessionLimits[selectedProfileId] || 0}
+            value={sessionLimits[selectedProfileId] !== undefined ? sessionLimits[selectedProfileId] : 60}
             onChange={(e) => setSessionLimit(selectedProfileId, parseInt(e.target.value, 10))}
             style={{
               padding: '0.75rem 1rem',
