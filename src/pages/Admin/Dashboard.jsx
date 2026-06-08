@@ -148,8 +148,12 @@ export default function Dashboard() {
 
       setStatusMsg(`Syncing details for ${fetchedBooks.length} books...`);
       for (const book of fetchedBooks) {
+        const existingBook = books.find(b => b.id === book.id);
         const cached = cloudMetadata[book.id];
-        if (cached && cached.details && cached.details.recommendations !== undefined) {
+        if (existingBook && existingBook.details && existingBook.details.recommendations !== undefined) {
+          book.details = existingBook.details;
+          book.coverUrl = existingBook.coverUrl;
+        } else if (cached && cached.details && cached.details.recommendations !== undefined) {
           book.details = cached.details;
           if (!book.hasCustomCover && cached.coverUrl) {
             book.coverUrl = cached.coverUrl;
