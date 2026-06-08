@@ -1,6 +1,6 @@
 # 🌱 StorySprout
 
-StorySprout is a 100% frontend, legacy-friendly (iOS 9.3.5 compatible) web application designed to act as a distraction-free audiobook player for kids. It sources audio directly from a shared Google Drive folder, eliminating the need for complex backend infrastructure, subscriptions, or storage limits.
+StorySprout is a 100% frontend web application designed to act as a distraction-free audiobook player for kids. It sources audio directly from a shared Google Drive folder, eliminating the need for complex backend infrastructure, subscriptions, or storage limits.
 
 ## ✨ Features
 
