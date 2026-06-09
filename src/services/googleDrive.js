@@ -1,3 +1,5 @@
+import { getFallbackCover } from '../lib/coverUtils';
+
 export const extractFolderId = (link) => {
   if (!link) return null;
   const match = link.match(/folders\/([a-zA-Z0-9_-]+)/);
@@ -28,13 +30,13 @@ const fetchFolderContents = async (folderId, apiKey) => {
 };
 
 const buildBookObj = (folderItem, contents, apiKey, seriesName) => {
-  let coverUrl = 'https://placehold.co/400x600/e2e8f0/475569?text=' + encodeURIComponent(folderItem.name);
+  let coverUrl = getFallbackCover(folderItem.name, 400, 600);
   let hasCustomCover = false;
   
   if (contents.imageFiles.length > 0) {
     const img = contents.imageFiles[0];
     // Always use the persistent Google Drive media download link to prevent link expiry
-    coverUrl = `https://www.googleapis.com/drive/v3/files/${img.id}?alt=media&key=${apiKey}`;
+    coverUrl = `https://drive.google.com/thumbnail?id=${img.id}&sz=w800`;
     hasCustomCover = true;
   }
 
@@ -52,7 +54,7 @@ const buildBookObj = (folderItem, contents, apiKey, seriesName) => {
   };
 };
 
-export const fetchBooksFromDrive = async () => {
+export const fetchBooksFromDrive = async (existingBooks = []) => {
   const folderId = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID;
   const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
   
@@ -60,10 +62,18 @@ export const fetchBooksFromDrive = async () => {
     throw new Error('Missing Google Drive configuration in .env file');
   }
 
+  const existingMap = new Map();
+  existingBooks.forEach(b => existingMap.set(b.id, b));
+
   const books = [];
   const rootContents = await fetchFolderContents(folderId, apiKey);
 
   for (const item of rootContents.subFolders) {
+    if (existingMap.has(item.id)) {
+      books.push(existingMap.get(item.id));
+      continue;
+    }
+
     const itemContents = await fetchFolderContents(item.id, apiKey);
     
     // 1. Standalone Book (Folder directly contains audio files)
@@ -74,9 +84,14 @@ export const fetchBooksFromDrive = async () => {
     else if (itemContents.subFolders.length > 0) {
       const seriesName = item.name;
       const seriesCover = itemContents.imageFiles.length > 0 ? 
-        `https://www.googleapis.com/drive/v3/files/${itemContents.imageFiles[0].id}?alt=media&key=${apiKey}` : null;
+        `https://drive.google.com/thumbnail?id=${itemContents.imageFiles[0].id}&sz=w800` : null;
       
       for (const subBookFolder of itemContents.subFolders) {
+        if (existingMap.has(subBookFolder.id)) {
+          books.push(existingMap.get(subBookFolder.id));
+          continue;
+        }
+
         const subBookContents = await fetchFolderContents(subBookFolder.id, apiKey);
         
         if (subBookContents.audioFiles.length > 0) {

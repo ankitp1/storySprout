@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import useStore from './store/useStore';
 import { fetchBooksFromDrive } from './services/googleDrive';
 import { fetchBookCover } from './services/googleBooks';
-import { getDriveCache, setDriveCache } from './lib/driveCache';
 import { loadDiscussionQuestions } from './lib/discussionQuestions';
 
 // Pages
@@ -29,8 +28,10 @@ function App() {
   React.useEffect(() => {
     if (isDarkMode) {
       document.body.classList.add('dark-mode');
+      document.body.classList.remove('light-mode');
     } else {
       document.body.classList.remove('dark-mode');
+      document.body.classList.add('light-mode');
     }
   }, [isDarkMode]);
 
@@ -48,18 +49,8 @@ function App() {
 
   React.useEffect(() => {
     const autoSync = async () => {
-      // Auto-sync for new users sharing the link
       if (books.length === 0) {
         try {
-          // Check Cache First
-          const cachedBooks = await getDriveCache();
-          if (cachedBooks && cachedBooks.length > 0) {
-            for (const book of cachedBooks) {
-              addBook(book);
-            }
-            return;
-          }
-
           const fetchedBooks = await fetchBooksFromDrive();
           for (const book of fetchedBooks) {
             if (!book.hasCustomCover) {
@@ -68,9 +59,6 @@ function App() {
             }
             addBook(book);
           }
-          
-          // Save to Cache
-          setDriveCache(fetchedBooks);
         } catch (err) {
           console.error("Auto-sync failed:", err);
         }

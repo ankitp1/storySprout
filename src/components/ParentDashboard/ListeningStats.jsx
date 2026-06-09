@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import useStore from '../../store/useStore';
 import { getQuestionsForBook } from '../../lib/discussionQuestions';
+import { getFallbackCover } from '../../lib/coverUtils';
 
 export default function ListeningStats({ profileId }) {
   const listeningStatsMap = useStore(state => state.listeningStats[profileId]);
@@ -41,7 +42,7 @@ export default function ListeningStats({ profileId }) {
                 borderRadius: '12px'
               }}>
                 <img 
-                  src={imgError[book.id] ? `https://placehold.co/80x120/e2e8f0/475569?text=Cover` : book.coverUrl} 
+                  src={(imgError[book.id] || !book.coverUrl) ? getFallbackCover(book.title, 80, 120) : book.coverUrl} 
                   alt={book.title} 
                   onError={() => setImgError(prev => ({ ...prev, [book.id]: true }))}
                   style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} 

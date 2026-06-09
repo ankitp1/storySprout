@@ -1,0 +1,312 @@
+/* ====================================================================
+   StorySprout Premium Component Overrides
+   Elegant & Refined - Direction 1
+   These styles override inline styles in React components
+   ==================================================================== */
+
+/* Book Cards - Library Page */
+.book-card {
+  background: rgba(30, 42, 69, 0.5) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
+  padding: 1.5rem !important;
+  border-radius: 24px !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.book-card:hover {
+  background: rgba(30, 42, 69, 0.6) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 12px 48px rgba(255, 107, 157, 0.25) !important;
+}
+
+.book-card h3 {
+  color: var(--text-main) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Play Overlay Button */
+.play-overlay > div {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+  box-shadow: 0 8px 24px rgba(255, 107, 157, 0.4) !important;
+}
+
+/* Status Badges */
+.book-card div[style*="background: '#4caf50'"],
+.book-card div[style*="background: var(--primary)"][style*="padding: '4px 12px'"] {
+  background: linear-gradient(135deg, rgba(255, 107, 157, 0.4), rgba(255, 107, 157, 0.2)) !important;
+  border: 1px solid rgba(255, 107, 157, 0.4) !important;
+  color: var(--text-main) !important;
+  box-shadow: 0 4px 12px rgba(255, 107, 157, 0.2) !important;
+  font-weight: 600 !important;
+}
+
+/* Finished Badge - Green */
+.book-card div:has(+ *):has(> *:contains("Finished")) {
+  background: linear-gradient(135deg, rgba(82, 190, 128, 0.4), rgba(82, 190, 128, 0.2)) !important;
+  border: 1px solid rgba(82, 190, 128, 0.4) !important;
+}
+
+/* Dashboard Cards */
+.dashboard-card,
+.stat-card,
+[class*="card"]:not(.play-overlay) {
+  background: rgba(30, 42, 69, 0.5) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
+  border-radius: 24px !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.dashboard-card:hover,
+.stat-card:hover,
+[class*="card"]:hover:not(.play-overlay) {
+  background: rgba(30, 42, 69, 0.6) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 12px 48px rgba(255, 107, 157, 0.25) !important;
+}
+
+/* Button Overrides */
+button[style*="background: 'var(--primary)'"],
+button[style*='background: "var(--primary)"'],
+button[class*="btn"] {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+  box-shadow: 0 8px 24px rgba(255, 107, 157, 0.3) !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+button[style*="background: 'var(--primary)'"]:hover,
+button[style*='background: "var(--primary)"']:hover,
+button[class*="btn"]:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 12px 32px rgba(255, 107, 157, 0.4) !important;
+}
+
+button[style*="background: 'var(--primary)'"]:active,
+button[style*='background: "var(--primary)"']:active,
+button[class*="btn"]:active {
+  transform: translateY(-1px) scale(0.98) !important;
+}
+
+/* Secondary Buttons */
+button[style*="background: var(--surface-light)"],
+button[style*='background: "var(--surface-light)"'],
+button[class*="secondary"] {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: var(--text-main) !important;
+  backdrop-filter: blur(20px) !important;
+  box-shadow: none !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+button[style*="background: var(--surface-light)"]:hover,
+button[style*='background: "var(--surface-light)"']:hover,
+button[class*="secondary"]:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(255, 107, 157, 0.15) !important;
+}
+
+/* Icon Buttons */
+button.btn-icon {
+  background: var(--glass-bg, rgba(255, 255, 255, 0.08)) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-main) !important;
+  backdrop-filter: blur(20px) !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+button.btn-icon:hover {
+  background: var(--glass-bg-hover, rgba(255, 255, 255, 0.12)) !important;
+  border-color: var(--glass-border-light, rgba(255, 255, 255, 0.25)) !important;
+  transform: translateY(-3px) scale(1.08) !important;
+  box-shadow: var(--glass-shadow-sm, 0 8px 24px rgba(255, 107, 157, 0.15)) !important;
+}
+
+button.btn-icon.active {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+  color: white !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 8px 24px rgba(255, 107, 157, 0.3) !important;
+}
+
+/* Modal & Overlay Cards */
+[class*="modal"],
+[class*="overlay"],
+[class*="panel"] {
+  background: rgba(30, 42, 69, 0.6) !important;
+  backdrop-filter: blur(32px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Form Inputs */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+select,
+textarea {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: var(--text-main) !important;
+  backdrop-filter: blur(20px) !important;
+  transition: all 0.2s ease !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.1) !important;
+  outline: none !important;
+}
+
+input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* Library Header */
+.library-header {
+  color: var(--text-main) !important;
+}
+
+.library-header h1 {
+  color: var(--text-main) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* Profile Header */
+.profile-header,
+[class*="header"] {
+  color: var(--text-main) !important;
+}
+
+[class*="header"] h1,
+[class*="header"] h2 {
+  color: var(--text-main) !important;
+  font-weight: 700 !important;
+}
+
+/* Admin Dashboard */
+.admin-container,
+.admin-header,
+.admin-section {
+  color: var(--text-main) !important;
+}
+
+.admin-section [class*="stat"] {
+  background: rgba(30, 42, 69, 0.5) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* PIN Entry & Forms */
+.pin-panel,
+.pin-entry,
+[class*="pin"] {
+  background: rgba(30, 42, 69, 0.6) !important;
+  backdrop-filter: blur(32px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 24px !important;
+}
+
+.pin-pad-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: var(--text-main) !important;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.pin-pad-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-2px) !important;
+}
+
+.pin-pad-btn:active {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
+  color: white !important;
+  transform: translateY(-1px) scale(0.98) !important;
+}
+
+/* Avatar Shop Grid */
+.shop-item,
+[class*="avatar-item"] {
+  background: rgba(30, 42, 69, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 16px !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  cursor: pointer !important;
+}
+
+.shop-item:hover,
+[class*="avatar-item"]:hover {
+  background: rgba(30, 42, 69, 0.6) !important;
+  border-color: rgba(255, 107, 157, 0.3) !important;
+  transform: translateY(-4px) !important;
+  box-shadow: 0 8px 24px rgba(255, 107, 157, 0.2) !important;
+}
+
+/* Text Colors */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-main) !important;
+}
+
+p {
+  color: var(--text-secondary) !important;
+}
+
+/* Success/Status Colors */
+[style*="color: '#4caf50'"],
+[style*='color: "#4caf50"'] {
+  color: var(--success) !important;
+}
+
+[style*="color: var(--primary)"] {
+  color: var(--primary) !important;
+}
+
+/* Animations */
+.animate-bounce-in {
+  animation: bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .book-card {
+    border-radius: 16px !important;
+    padding: 1rem !important;
+  }
+  
+  .dashboard-card,
+  .stat-card {
+    border-radius: 16px !important;
+    padding: 1.25rem !important;
+  }
+}

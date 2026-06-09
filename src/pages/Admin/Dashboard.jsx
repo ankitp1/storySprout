@@ -4,8 +4,8 @@ import useStore from '../../store/useStore';
 import { LogOut, RefreshCw, Trash2, Info, BookOpen, Key, Link, ArrowLeft, ExternalLink, Mail, Lock } from 'lucide-react';
 import { fetchBooksFromDrive } from '../../services/googleDrive';
 import { fetchBookCover, fetchBookDetails } from '../../services/googleBooks';
-import { clearDriveCache, setDriveCache } from '../../lib/driveCache';
 import PINEntry from '../../components/ParentDashboard/PINEntry';
+import { getFallbackCover } from '../../lib/coverUtils';
 import DashboardOverview from '../../components/ParentDashboard/DashboardOverview';
 import ListeningStats from '../../components/ParentDashboard/ListeningStats';
 import { triggerDeveloperEmail } from '../../lib/diagnostics';
@@ -20,6 +20,17 @@ const getCleanSearchQuery = (title) => {
   clean = clean.replace(/\[.*?\]|\(.*?\)/g, '');
   // Normalize extra spaces
   return clean.replace(/\s+/g, ' ').trim();
+};
+
+const normalizeCoverUrl = (url) => {
+  if (!url) return url;
+  if (url.includes('googleapis.com/drive/v3/files') && url.includes('alt=media')) {
+    const match = url.match(/files\/([a-zA-Z0-9_-]+)/);
+    if (match) {
+      return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800`;
+    }
+  }
+  return url;
 };
 
 export default function Dashboard() {
@@ -135,8 +146,7 @@ export default function Dashboard() {
     setIsSyncing(true);
     setStatusMsg('Connecting to Google Drive...');
     try {
-      await clearDriveCache();
-      const fetchedBooks = await fetchBooksFromDrive();
+      const fetchedBooks = await fetchBooksFromDrive(books);
       if (fetchedBooks.length === 0) {
         setStatusMsg('No audiobooks found.');
         setIsSyncing(false);
@@ -150,23 +160,30 @@ export default function Dashboard() {
       for (const book of fetchedBooks) {
         const existingBook = books.find(b => b.id === book.id);
         const cached = cloudMetadata[book.id];
+        
+        // If we already have the book with its details, skip entirely!
         if (existingBook && existingBook.details && existingBook.details.recommendations !== undefined) {
-          book.details = existingBook.details;
-          book.coverUrl = existingBook.coverUrl;
-        } else if (cached && cached.details && cached.details.recommendations !== undefined) {
+          continue; // Don't even update the store, we have everything we need
+        } 
+        
+        if (cached && cached.details && cached.details.recommendations !== undefined) {
           book.details = cached.details;
           if (!book.hasCustomCover && cached.coverUrl) {
-            book.coverUrl = cached.coverUrl;
+            book.coverUrl = normalizeCoverUrl(cached.coverUrl);
+          } else {
+            book.coverUrl = normalizeCoverUrl(book.coverUrl);
           }
         } else {
           setStatusMsg(`Fetching details for: ${book.title}...`);
           const details = await fetchBookDetails(book.title);
           let coverUrl = book.coverUrl;
+          
           if (!book.hasCustomCover) {
             const fetchedCover = await fetchBookCover(book.title);
             if (fetchedCover) coverUrl = fetchedCover;
           }
 
+          // Don't cache coverUrl if it's from Google Drive, as it expires
           const metadataToCache = {
             details,
             coverUrl: book.hasCustomCover ? null : coverUrl
@@ -184,7 +201,6 @@ export default function Dashboard() {
         addBook(book);
       }
 
-      await setDriveCache(fetchedBooks);
       setStatusMsg(`Success! Synced ${fetchedBooks.length} books.`);
     } catch (err) {
       console.error(err);
@@ -205,9 +221,13 @@ export default function Dashboard() {
       const details = await fetchBookDetails(book.title);
       let updatedCoverUrl = book.coverUrl;
       if (!book.hasCustomCover) {
-        const fetchedCover = await fetchBookCover(book.title);
-        if (fetchedCover) {
-          updatedCoverUrl = fetchedCover;
+        if (book.coverUrl && !book.coverUrl.startsWith('https://placehold.co')) {
+          updatedCoverUrl = book.coverUrl;
+        } else {
+          const fetchedCover = await fetchBookCover(book.title);
+          if (fetchedCover) {
+            updatedCoverUrl = fetchedCover;
+          }
         }
       }
 
@@ -468,7 +488,7 @@ export default function Dashboard() {
               books.map(book => (
                 <div key={book.id} style={{ display: 'flex', alignItems: 'center', padding: '1rem', borderRadius: 'var(--radius-md)', gap: '1rem', border: '1px solid var(--border)' }}>
                   <img 
-                    src={imgError[book.id] ? `https://placehold.co/60x80/e2e8f0/475569?text=Cover` : book.coverUrl} 
+                    src={(imgError[book.id] || !book.coverUrl) ? getFallbackCover(book.title, 60, 80) : book.coverUrl} 
                     alt={book.title} 
                     onError={() => setImgError(prev => ({ ...prev, [book.id]: true }))}
                     style={{ width: '60px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} 
@@ -579,7 +599,7 @@ export default function Dashboard() {
             
             <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', alignItems: 'flex-start' }}>
               <img 
-                src={imgError['selected'] ? `https://placehold.co/80x120/e2e8f0/475569?text=Cover` : selectedBookInfo.coverUrl} 
+                src={(imgError['selected'] || !selectedBookInfo.coverUrl) ? getFallbackCover(selectedBookInfo.title, 80, 120) : selectedBookInfo.coverUrl} 
                 alt="Cover" 
                 onError={() => setImgError(prev => ({ ...prev, selected: true }))}
                 style={{ width: '80px', borderRadius: '8px' }} 

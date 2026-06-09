@@ -11,7 +11,7 @@ StorySprout is a 100% frontend web application designed to act as a distraction-
 - **Smart Resume**: When resuming a book, the player automatically rewinds 5 seconds to provide a quick refresher.
 - **Sleep Timer**: A built-in timer (10-30 mins) safely pauses playback to prevent battery drain if a child falls asleep.
 - **Book Celebrations & Ratings**: When a child finishes a book, they get a confetti celebration and a 5-star rating widget!
-- **Library Discovery**: A kid-friendly search bar, filter pills (Completed, Favorites, Series), and sorting (A-Z, Last Played) make browsing easy for growing libraries.
+- **Library Discovery**: A kid-friendly search icon and filter pills (Completed, Favorites, Series) make browsing easy for growing libraries.
 - **Accessibility Enhancements**: Includes full keyboard navigation (`Space` to play/pause, Arrows to skip) and a High-Contrast mode toggle for children with vision challenges.
 - **Parental Session Limits**: Parents can set a maximum listening limit per session (defaults to 60 minutes). Once reached, the screen locks and requires a parent PIN to resume.
 - **Profile Reset & Custom Access**: Parent dashboard includes settings to reset all custom book access permissions for any child profile in one click.
@@ -25,7 +25,7 @@ StorySprout is a 100% frontend web application designed to act as a distraction-
 - **Framework**: React (Vite)
 - **Routing**: React Router
 - **State Management**: Zustand (with localForage for persistent offline storage)
-- **Styling**: Vanilla CSS (Tailwind-free for maximum legacy compatibility)
+- **Styling**: Premium Glassmorphism Design System (Vanilla CSS with sophisticated modern filters, gradients, and backdrop blurs)
 - **Icons**: Lucide React
 - **Deployment**: Vercel
 

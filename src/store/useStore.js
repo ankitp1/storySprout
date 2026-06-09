@@ -27,6 +27,17 @@ const triggerCloudSync = (get) => {
   }, 5000); // Debounce for 5 seconds
 };
 
+const normalizeCoverUrl = (url) => {
+  if (!url) return url;
+  if (url.includes('googleapis.com/drive/v3/files') && url.includes('alt=media')) {
+    const match = url.match(/files\/([a-zA-Z0-9_-]+)/);
+    if (match) {
+      return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800`;
+    }
+  }
+  return url;
+};
+
 const useStore = create(
   persist(
     (set, get) => ({
@@ -112,7 +123,11 @@ const useStore = create(
         if (state.books.some(b => b.id === book.id)) {
           return state;
         }
-        return { books: [...state.books, book] };
+        const normalizedBook = {
+          ...book,
+          coverUrl: normalizeCoverUrl(book.coverUrl)
+        };
+        return { books: [...state.books, normalizedBook] };
       }),
       removeBook: (bookId) => set((state) => ({ books: state.books.filter(b => b.id !== bookId) })),
       
@@ -369,10 +384,31 @@ const useStore = create(
               }
             }));
 
-            const res = await fetch(ch.url);
-            if (!res.ok) throw new Error(`Failed to download chapter ${ch.name}`);
-            const blob = await res.blob();
-            await saveOfflineAudio(bookId, ch.id, blob);
+            let success = false;
+            let lastErrorMsg = '';
+            for (let retry = 0; retry < 3; retry++) {
+              try {
+                const res = await fetch(ch.url);
+                if (!res.ok) {
+                  if (res.status === 403) {
+                    throw new Error(`Google Drive API limits exceeded or access denied (403) for chapter ${ch.name}`);
+                  }
+                  throw new Error(`Failed to download chapter ${ch.name} (Status: ${res.status})`);
+                }
+                const blob = await res.blob();
+                await saveOfflineAudio(bookId, ch.id, blob);
+                success = true;
+                break;
+              } catch (e) {
+                lastErrorMsg = e.message;
+                await new Promise(resolve => setTimeout(resolve, 1000 * (retry + 1))); // exponential backoff
+              }
+            }
+
+            if (!success) {
+              throw new Error(`Failed after retries: ${lastErrorMsg}`);
+            }
+            
             count++;
           }
 
@@ -611,7 +647,7 @@ const useStore = create(
     {
       name: 'rowans-library-storage', // name of the item in the storage (must be unique)
       storage: createJSONStorage(() => localforage),
-      version: 3, // Increment version for migration
+      version: 4, // Increment version for migration
       migrate: (persistedState, version) => {
         let state = persistedState;
         if (version === 0 || version === 1 || version === undefined) {
@@ -666,6 +702,14 @@ const useStore = create(
           };
           delete state.isHighContrast;
           delete state.theme;
+        }
+        if (version < 4) {
+          if (state && Array.isArray(state.books)) {
+            state.books = state.books.map(book => ({
+              ...book,
+              coverUrl: normalizeCoverUrl(book.coverUrl)
+            }));
+          }
         }
         return state;
       }

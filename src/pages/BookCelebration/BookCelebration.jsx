@@ -4,6 +4,7 @@ import useStore from '../../store/useStore';
 import { getQuestionsForBook } from '../../lib/discussionQuestions';
 import { Trophy, MessageCircle, Star } from 'lucide-react';
 import Confetti from 'react-confetti';
+import { getFallbackCover } from '../../lib/coverUtils';
 import './BookCelebration.css';
 
 export default function BookCelebration() {
@@ -68,7 +69,7 @@ export default function BookCelebration() {
         <p>You finished <strong>{book.title}</strong>!</p>
         
         <img 
-          src={imgError ? `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}` : book.coverUrl} 
+          src={(imgError || !book.coverUrl) ? getFallbackCover(book.title, 400, 600) : book.coverUrl} 
           alt={book.title} 
           onError={() => setImgError(true)}
           style={{ width: '200px', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', marginBottom: '2rem' }} 

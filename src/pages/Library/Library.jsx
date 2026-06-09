@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import { Play, Settings, Users, Search, Lock, Unlock, HelpCircle, Sun, Moon, Download, Trash2 } from 'lucide-react';
+import { Play, Settings, Users, Search, Lock, Unlock, HelpCircle, Sun, Moon, Download, Trash2, X } from 'lucide-react';
+import { getFallbackCover } from '../../lib/coverUtils';
 import PINEntry from '../../components/ParentDashboard/PINEntry';
 import OnboardingTour from '../../components/OnboardingTour';
 
@@ -68,7 +69,7 @@ const BookCard = ({
     };
   }, [isDownloaded, book.id]);
 
-  const coverSrc = offlineCoverUrl || (imgError ? `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}` : book.coverUrl);
+  const coverSrc = offlineCoverUrl || ((imgError || !book.coverUrl) ? getFallbackCover(book.title, 400, 600) : book.coverUrl);
 
   return (
     <div 
@@ -299,19 +300,19 @@ export default function Library() {
     {
       selector: '[data-tour="profile"]',
       title: "Kid Profiles",
-      content: "This is your kid's profile! Multiple kids can share the app, each with their own character, progress, points, and optional 4-digit PIN security.",
+      content: "This is your kid's profile! Multiple kids can share the app, each with their own character, progress, and optional 4-digit PIN security.",
       icon: "🦊"
     },
-    {
+    /* {
       selector: '[data-tour="shop"]',
       title: "🌱 Earn Points & Avatar Shop",
       content: "Listen to books to earn points! Tap this badge to spend points in the shop to unlock fun premium profile emojis.",
       icon: "🛍️"
-    },
+    }, */
     {
       selector: '[data-tour="search"]',
-      title: "Search & Sort",
-      content: "Search books by title/author instantly, or sort your library by A-Z or what was last played.",
+      title: "Search Library",
+      content: "Tap the magnifying glass to search for books by title or author instantly.",
       icon: "🔍"
     },
     {
@@ -338,6 +339,7 @@ export default function Library() {
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All'); // 'All', 'Completed', 'Favorites', 'Series'
   const [sortBy, setSortBy] = useState('Title'); // 'Title', 'Last Played'
 
@@ -434,7 +436,8 @@ export default function Library() {
         </div>
         
         <div className="library-header-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          {/* Points Display / Shop Trigger */}
+          {/* Points Display / Shop Trigger (HIDDEN FOR NOW) */}
+          {/* 
           {activeProfile && (
             <button 
               onClick={() => setIsShopOpen(true)}
@@ -457,52 +460,55 @@ export default function Library() {
             >
               🌱 {points} Pts
             </button>
-          )}
+          )} 
+          */}
 
-          {/* Theme Toggle Button */}
-          <button 
-            className="btn-icon" 
-            onClick={toggleDarkMode}
-            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            style={{ 
-              background: 'white',
-              color: 'var(--text-main)'
-            }}
-          >
-            {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
-          </button>
-          
-          {/* Help Tour Button */}
-          <button 
-            className="btn-icon" 
-            onClick={startTour}
-            title="Help Tour"
-            style={{ 
-              background: 'white',
-              color: 'var(--text-main)'
-            }}
-          >
-            <HelpCircle size={24} />
-          </button>
-          
-          {/* Switch Profile Button */}
-          <button 
-            onClick={handleSwitchProfile}
-            style={{ color: 'var(--text-muted)', opacity: 0.5, padding: '1rem', background: 'none', border: 'none', cursor: 'pointer' }}
-            title="Switch Profile"
-          >
-            <Users size={24} />
-          </button>
-          
-          {/* Admin Button */}
-          <button 
-            onClick={handleAdminClick}
-            data-tour="parent-zone"
-            style={{ color: 'var(--text-muted)', opacity: 0.5, padding: '1rem', background: 'none', border: 'none', cursor: 'pointer' }}
-            title="Admin"
-          >
-            <Settings size={24} />
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {/* Theme Toggle Button */}
+            <button 
+              className="btn-icon" 
+              onClick={toggleDarkMode}
+              title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              style={{ 
+                background: 'var(--surface-color)',
+                color: 'var(--text-main)'
+              }}
+            >
+              {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+            </button>
+            
+            {/* Help Tour Button */}
+            <button 
+              className="btn-icon" 
+              onClick={startTour}
+              title="Help Tour"
+              style={{ 
+                background: 'var(--surface-color)',
+                color: 'var(--text-main)'
+              }}
+            >
+              <HelpCircle size={24} />
+            </button>
+            
+            {/* Switch Profile Button */}
+            <button 
+              onClick={handleSwitchProfile}
+              style={{ color: 'var(--text-muted)', opacity: 0.7, padding: '0.75rem', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              title="Switch Profile"
+            >
+              <Users size={24} />
+            </button>
+            
+            {/* Admin Button */}
+            <button 
+              onClick={handleAdminClick}
+              data-tour="parent-zone"
+              style={{ color: 'var(--text-muted)', opacity: 0.7, padding: '0.75rem', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              title="Admin"
+            >
+              <Settings size={24} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -528,69 +534,100 @@ export default function Library() {
       {/* Discovery & Filters Toolbar */}
       <div style={{ marginBottom: '3rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         
-        {/* Search & Sort Row */}
-        <div className="search-sort-row" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div data-tour="search" style={{ position: 'relative', flex: 1, minWidth: '250px' }}>
-            <Search size={24} color="var(--text-muted)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
-            <input 
-              type="text" 
-              placeholder="Search books or authors..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '1rem 1rem 1rem 3.5rem',
-                borderRadius: '16px',
-                border: '2px solid var(--border)',
-                fontSize: '1.1rem',
-                background: 'var(--surface-color)',
-                color: 'var(--text-main)'
-              }}
-            />
-          </div>
+        {/* Filter Pills & Search Row */}
+        <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem', alignItems: 'center' }}>
           
-          <select 
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            style={{
-              padding: '1rem',
-              borderRadius: '16px',
-              border: '2px solid var(--border)',
-              fontSize: '1.1rem',
-              background: 'var(--surface-color)',
-              color: 'var(--text-main)',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="Title">Sort A-Z</option>
-            <option value="Last Played">Last Played</option>
-          </select>
-        </div>
+          {/* Collapsible Search */}
+          <div data-tour="search" style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: isSearchExpanded ? 1 : 'none', minWidth: isSearchExpanded ? '250px' : 'auto' }}>
+            {!isSearchExpanded ? (
+              <button
+                className="btn-icon"
+                onClick={() => setIsSearchExpanded(true)}
+                style={{
+                  background: 'var(--surface-color)',
+                  color: 'var(--text-main)',
+                  border: '2px solid var(--border)',
+                  flexShrink: 0
+                }}
+                title="Search Books"
+              >
+                <Search size={24} />
+              </button>
+            ) : (
+              <>
+                <Search size={24} color="var(--text-muted)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input 
+                  type="text" 
+                  placeholder="Search books or authors..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
+                  style={{
+                    width: '100%',
+                    padding: '1rem 3.5rem 1rem 3.5rem',
+                    borderRadius: '24px',
+                    border: '2px solid var(--border)',
+                    fontSize: '1.1rem',
+                    background: 'var(--surface-color)',
+                    color: 'var(--text-main)',
+                    minWidth: '250px'
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    setIsSearchExpanded(false);
+                    setSearchQuery('');
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '8px',
+                    borderRadius: '50%'
+                  }}
+                  title="Clear search"
+                >
+                  <X size={20} />
+                </button>
+              </>
+            )}
+          </div>
 
-        {/* Filter Pills Row */}
-        <div data-tour="filters" style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-          {['All', 'Completed', 'Favorites', 'Series', 'Downloaded'].map(filter => (
-            <button
-              key={filter}
-              onClick={() => setActiveFilter(filter)}
-              style={{
-                padding: '0.75rem 1.5rem',
-                borderRadius: '24px',
-                border: 'none',
-                background: activeFilter === filter ? 'var(--primary)' : 'var(--surface-color)',
-                color: activeFilter === filter ? 'var(--btn-text-color, white)' : 'var(--text-main)',
-                fontSize: '1rem',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'background 0.2s',
-                boxShadow: activeFilter === filter ? 'var(--shadow-sm)' : 'none'
-              }}
-            >
-              {filter === 'Favorites' && '⭐ '}
-              {filter}
-            </button>
-          ))}
+          <div style={{ width: '1px', height: '32px', background: 'var(--border)', margin: '0 0.25rem', flexShrink: 0 }}></div>
+
+          <div data-tour="filters" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            {['All', 'Completed', 'Favorites', 'Series', 'Downloaded'].map(filter => (
+              <button
+                key={filter}
+                onClick={() => setActiveFilter(filter)}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '24px',
+                  border: '2px solid var(--border)',
+                  background: activeFilter === filter ? 'var(--primary)' : 'var(--surface-color)',
+                  color: activeFilter === filter ? 'var(--btn-text-color, white)' : 'var(--text-main)',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  transition: 'background 0.2s',
+                  boxShadow: activeFilter === filter ? 'var(--shadow-sm)' : 'none'
+                }}
+              >
+                {filter === 'Favorites' && '⭐ '}
+                {filter}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -613,7 +650,7 @@ export default function Library() {
               ) : (
                 <div className="book-grid" style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
                   gap: '2.5rem'
                 }}>
                   {processedBooks.map((book, idx) => (
@@ -676,7 +713,7 @@ export default function Library() {
                   <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem', color: 'var(--text-main)' }}>More Books</h2>
                   <div className="book-grid" style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
                     gap: '2.5rem'
                   }}>
                     {standaloneBooks.map((book, idx) => (

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
 import { ArrowLeft, Play, Pause, SkipBack, SkipForward, RotateCcw, Moon, AlertTriangle, Rewind } from 'lucide-react';
+import { getFallbackCover } from '../../lib/coverUtils';
 import './Player.css';
 
 export default function Player() {
@@ -366,7 +367,13 @@ export default function Player() {
       } else {
         audioRef.current.play().catch(e => {
           console.error("Playback error:", e);
-          setAudioError("Unable to play this chapter. Please check your internet connection.");
+          if (e.name === 'NotAllowedError') {
+            setAudioError("Your browser blocked autoplay. Please tap the play button manually.");
+          } else if (e.name === 'NotSupportedError') {
+            setAudioError("This audio format is not supported by your browser.");
+          } else {
+            setAudioError("Unable to play this chapter. This could be due to a poor connection or API rate limits.");
+          }
           setIsPlaying(false);
         });
       }
@@ -512,7 +519,7 @@ export default function Player() {
           </div>
         ) : (
           <img 
-            src={offlineCoverUrl || (imgError ? `https://placehold.co/400x600/e2e8f0/475569?text=${encodeURIComponent(book.title)}` : book.coverUrl)} 
+            src={offlineCoverUrl || ((imgError || !book.coverUrl) ? getFallbackCover(book.title, 400, 600) : book.coverUrl)} 
             alt={book.title} 
             onError={() => setImgError(true)}
             className="player-cover"
@@ -520,7 +527,8 @@ export default function Player() {
           />
         )}
 
-        <h1 style={{ margin: 0, fontSize: '2.5rem', textAlign: 'center', maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{book.title}</h1>
+        {/* Book Title is hidden because the cover image usually contains it */}
+        {/* <h1 style={{ margin: 0, fontSize: '2.5rem', textAlign: 'center', maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{book.title}</h1> */}
         <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>{currentChapter?.name || `Chapter ${chapterIndex + 1}`}</p>
       </div>
 
@@ -530,8 +538,13 @@ export default function Player() {
           src={audioUrl || undefined} 
           onTimeUpdate={handleTimeUpdate} 
           onError={(e) => {
-            console.error("Audio player element error:", e);
-            setAudioError("Cannot load audio chapter. Please check your internet connection or sync the library.");
+            const error = e.target.error;
+            console.error("Audio player element error:", error);
+            if (error && error.code === 4) {
+              setAudioError("Media resource could not be loaded. This is often caused by Google Drive API rate limits (403 Forbidden). Try downloading the book instead.");
+            } else {
+              setAudioError("Cannot load audio chapter. Please check your internet connection or sync the library.");
+            }
             setIsPlaying(false);
           }}
           onEnded={() => {
@@ -596,8 +609,10 @@ export default function Player() {
             </button>
           </div>
         )}
-        <div style={{ width: '100%', maxWidth: '800px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ fontSize: '1rem', color: 'var(--text-muted)', width: '50px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatTime(currentTime)}</span>
+        <div style={{ width: '100%', maxWidth: '800px', display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', padding: '0 1rem', boxSizing: 'border-box' }}>
+          <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-main)', width: '60px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>
+            {formatTime(currentTime)}
+          </span>
           <input 
             type="range"
             min={0}
@@ -606,22 +621,42 @@ export default function Player() {
             onChange={handleSeek}
             style={{
               flex: 1,
-              height: '12px',
-              borderRadius: '6px',
-              background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${duration ? (currentTime / duration) * 100 : 0}%, var(--border) ${duration ? (currentTime / duration) * 100 : 0}%, var(--border) 100%)`,
+              height: '16px',
+              borderRadius: '8px',
+              background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${duration ? (currentTime / duration) * 100 : 0}%, var(--surface-light) ${duration ? (currentTime / duration) * 100 : 0}%, var(--surface-light) 100%)`,
               outline: 'none',
               cursor: 'pointer',
-              WebkitAppearance: 'none'
+              WebkitAppearance: 'none',
+              boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.1)'
             }}
             className="player-slider"
           />
-          <span style={{ fontSize: '1rem', color: 'var(--text-muted)', width: '50px', fontFamily: 'var(--font-mono)' }}>{formatTime(duration)}</span>
+          <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-muted)', width: '60px', fontFamily: 'var(--font-mono)' }}>
+            {formatTime(duration)}
+          </span>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem', position: 'relative' }}>
-          <button className="btn-icon" onClick={() => setShowSleepTimerMenu(!showSleepTimerMenu)} style={{ color: sleepTimerRemaining ? 'var(--primary)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-color)', padding: '0.5rem 1rem', borderRadius: '20px' }}>
+          <button 
+            onClick={() => setShowSleepTimerMenu(!showSleepTimerMenu)} 
+            style={{ 
+              color: sleepTimerRemaining ? 'var(--primary)' : 'var(--text-muted)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem', 
+              background: 'var(--bg-color)', 
+              padding: '0.5rem 1.5rem', 
+              borderRadius: '24px',
+              border: '2px solid var(--border)',
+              boxShadow: 'var(--shadow-sm)',
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+              flexShrink: 0
+            }}
+          >
             <Moon size={20} fill={sleepTimerRemaining ? 'var(--primary)' : 'none'} />
-            {sleepTimerRemaining ? <span style={{ fontWeight: 'bold' }}>{formatTime(sleepTimerRemaining)}</span> : <span>Sleep Timer</span>}
+            {sleepTimerRemaining ? <span>{formatTime(sleepTimerRemaining)}</span> : <span>Sleep Timer</span>}
           </button>
           {showSleepTimerMenu && (
             <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '1rem', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', zIndex: 10 }}>
