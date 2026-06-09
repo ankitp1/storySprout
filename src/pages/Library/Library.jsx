@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import { Play, Settings, Users, Search, Lock, Unlock, HelpCircle, Sun, Moon, Download, Trash2, X } from 'lucide-react';
+import { Play, Settings, Users, Search, Lock, Unlock, HelpCircle, Sun, Moon, Download, Trash2, X, LayoutGrid } from 'lucide-react';
 import { getFallbackCover } from '../../lib/coverUtils';
 import PINEntry from '../../components/ParentDashboard/PINEntry';
 import OnboardingTour from '../../components/OnboardingTour';
@@ -36,7 +36,8 @@ const BookCard = ({
   isDownloading,
   downloadProgress,
   downloadBook,
-  removeDownloadedBook
+  removeDownloadedBook,
+  isSmallGrid = false
 }) => {
   const [imgError, setImgError] = useState(false);
   const [offlineCoverUrl, setOfflineCoverUrl] = useState(null);
@@ -79,7 +80,7 @@ const BookCard = ({
       style={{
         background: 'var(--surface-color)',
         borderRadius: 'var(--radius-lg)',
-        padding: '1.5rem',
+        padding: isSmallGrid ? '0.75rem' : '1.5rem',
         boxShadow: 'var(--shadow-md)',
         cursor: 'pointer',
         transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
@@ -88,7 +89,7 @@ const BookCard = ({
         alignItems: 'center',
         position: 'relative',
         overflow: 'hidden',
-        width: isGrid ? '100%' : '250px',
+        width: isGrid ? '100%' : 'var(--card-width, 250px)',
         flexShrink: 0
       }}
       onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-10px) scale(1.02)'}
@@ -171,12 +172,12 @@ const BookCard = ({
         className="play-overlay"
         >
           <div style={{
-            width: '64px', height: '64px', borderRadius: '50%',
+            width: isSmallGrid ? '48px' : '64px', height: isSmallGrid ? '48px' : '64px', borderRadius: '50%',
             background: 'var(--primary)', color: 'var(--btn-text-color, white)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 4px 15px rgba(255, 107, 107, 0.5)'
           }}>
-            <Play size={32} fill="currentColor" style={{ marginLeft: '4px' }} />
+            <Play size={isSmallGrid ? 24 : 32} fill="currentColor" style={{ marginLeft: '4px' }} />
           </div>
         </div>
 
@@ -184,7 +185,7 @@ const BookCard = ({
           <div style={{
             position: 'absolute', top: '10px', right: '10px',
             background: '#4caf50', color: 'white', padding: '4px 12px',
-            borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold',
+            borderRadius: '20px', fontSize: isSmallGrid ? '0.65rem' : '0.8rem', fontWeight: 'bold',
             boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
           }}>
             ⭐ Finished!
@@ -193,7 +194,7 @@ const BookCard = ({
           <div style={{
             position: 'absolute', top: '10px', right: '10px',
             background: 'var(--primary)', color: 'var(--btn-text-color, white)', padding: '4px 12px',
-            borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold',
+            borderRadius: '20px', fontSize: isSmallGrid ? '0.65rem' : '0.8rem', fontWeight: 'bold',
             boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
           }}>
             ▶ Resume {formatTime(progress[book.id].currentTime)}
@@ -205,7 +206,7 @@ const BookCard = ({
           <div style={{
             position: 'absolute', bottom: '10px', right: '10px',
             background: 'white', color: '#FFD700', padding: '4px 8px',
-            borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold',
+            borderRadius: '12px', fontSize: isSmallGrid ? '0.65rem' : '0.8rem', fontWeight: 'bold',
             boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
             display: 'flex', alignItems: 'center', gap: '4px'
           }}>
@@ -213,7 +214,7 @@ const BookCard = ({
           </div>
         )}
       </div>
-      <h3 style={{ margin: 0, textAlign: 'center', fontSize: '1.5rem', width: '100%', wordWrap: 'break-word', lineHeight: '1.2' }}>{book.title}</h3>
+      <h3 style={{ margin: 0, textAlign: 'center', fontSize: isSmallGrid ? '1rem' : '1.5rem', width: '100%', wordWrap: 'break-word', lineHeight: '1.2' }}>{book.title}</h3>
       
       <style>{`
         div:hover > .play-overlay {
@@ -359,6 +360,9 @@ export default function Library() {
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [modalImgError, setModalImgError] = useState(false);
 
+  // Grid Size State
+  const [isSmallGrid, setIsSmallGrid] = useState(false);
+
   const handleBookClick = (book) => {
     const hasProgress = progress[book.id] && progress[book.id].currentTime > 0;
     const isFinished = readBooks.includes(book.id);
@@ -424,8 +428,29 @@ export default function Library() {
   const standaloneBooks = processedBooks.filter(b => !b.series);
   const isFiltering = searchQuery !== '' || activeFilter !== 'All' || sortBy !== 'Title';
 
+  // Continue Reading logic
+  const continueReadingBooks = books
+    .filter(book => {
+      if (readBooks.includes(book.id)) return false;
+      const prog = progress[book.id];
+      if (!prog) return false;
+      return prog.chapterIndex > 0 || prog.currentTime > 5;
+    })
+    .sort((a, b) => {
+      const timeA = listeningStats[a.id]?.lastListenedAt ? new Date(listeningStats[a.id].lastListenedAt).getTime() : 0;
+      const timeB = listeningStats[b.id]?.lastListenedAt ? new Date(listeningStats[b.id].lastListenedAt).getTime() : 0;
+      return timeB - timeA;
+    })
+    .slice(0, 10); // cap at 10 most recent
+
   return (
-    <div style={{ padding: '2rem', flex: 1, display: 'flex', flexDirection: 'column' }} className="library-main-container">
+    <div style={{ 
+      padding: '2rem', 
+      flex: 1, 
+      display: 'flex', 
+      flexDirection: 'column',
+      '--card-width': isSmallGrid ? '160px' : '250px'
+    }} className="library-main-container">
       {/* Header */}
       <div className="library-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
         <div>
@@ -484,6 +509,19 @@ export default function Library() {
               }}
             >
               {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+            </button>
+
+            {/* Grid Size Toggle Button */}
+            <button 
+              className="btn-icon" 
+              onClick={() => setIsSmallGrid(!isSmallGrid)}
+              title={isSmallGrid ? "Switch to Large Grid" : "Switch to Small Grid"}
+              style={{ 
+                background: isSmallGrid ? 'var(--primary)' : 'var(--surface-color)',
+                color: isSmallGrid ? 'white' : 'var(--text-main)'
+              }}
+            >
+              <LayoutGrid size={24} />
             </button>
             
             {/* Help Tour Button */}
@@ -659,7 +697,8 @@ export default function Library() {
               ) : (
                 <div className="book-grid" style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                  '--grid-min': isSmallGrid ? '140px' : '250px',
+                  gridTemplateColumns: `repeat(auto-fill, minmax(${isSmallGrid ? '140px' : '250px'}, 1fr))`,
                   gap: '2.5rem'
                 }}>
                   {processedBooks.map((book, idx) => (
@@ -677,6 +716,7 @@ export default function Library() {
                       downloadProgress={downloadProgress[book.id]}
                       downloadBook={downloadBook}
                       removeDownloadedBook={removeDownloadedBook}
+                      isSmallGrid={isSmallGrid}
                     />
                   ))}
                 </div>
@@ -685,6 +725,40 @@ export default function Library() {
           ) : (
             /* Normal grouped view */
             <>
+              {/* Continue Reading Section */}
+              {!isFiltering && continueReadingBooks.length > 0 && (
+                <div style={{ marginBottom: '3rem' }}>
+                  <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem', color: 'var(--text-main)' }}>Continue Reading</h2>
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '2rem', 
+                    overflowX: 'auto', 
+                    paddingBottom: '2rem',
+                    paddingTop: '1rem',
+                    scrollSnapType: 'x mandatory'
+                  }}>
+                    {continueReadingBooks.map((book) => (
+                      <div key={book.id} style={{ scrollSnapAlign: 'start' }}>
+                        <BookCard 
+                          book={book} 
+                          progress={progress} 
+                          readBooks={readBooks} 
+                          ratings={ratings} 
+                          onBookClick={handleBookClick} 
+                          isDownloaded={!!downloadedBooks[book.id]}
+                          isDownloading={!!downloadProgress[book.id]}
+                          downloadProgress={downloadProgress[book.id]}
+                          downloadBook={downloadBook}
+                          removeDownloadedBook={removeDownloadedBook}
+                          isGrid={false}
+                          isSmallGrid={isSmallGrid}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {Object.entries(seriesGroups).map(([seriesName, seriesBooks]) => (
                 <div key={seriesName} style={{ marginBottom: '3rem' }}>
                   <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem', color: 'var(--text-main)' }}>{seriesName}</h2>
@@ -710,6 +784,7 @@ export default function Library() {
                           downloadProgress={downloadProgress[book.id]}
                           downloadBook={downloadBook}
                           removeDownloadedBook={removeDownloadedBook}
+                          isSmallGrid={isSmallGrid}
                         />
                       </div>
                     ))}
@@ -722,7 +797,8 @@ export default function Library() {
                   <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem', color: 'var(--text-main)' }}>More Books</h2>
                   <div className="book-grid" style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                    '--grid-min': isSmallGrid ? '140px' : '250px',
+                    gridTemplateColumns: `repeat(auto-fill, minmax(${isSmallGrid ? '140px' : '250px'}, 1fr))`,
                     gap: '2.5rem'
                   }}>
                     {standaloneBooks.map((book, idx) => (
@@ -740,6 +816,7 @@ export default function Library() {
                         downloadProgress={downloadProgress[book.id]}
                         downloadBook={downloadBook}
                         removeDownloadedBook={removeDownloadedBook}
+                        isSmallGrid={isSmallGrid}
                       />
                     ))}
                   </div>
