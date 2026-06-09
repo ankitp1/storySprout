@@ -24,10 +24,11 @@ const getCleanSearchQuery = (title) => {
 
 const normalizeCoverUrl = (url) => {
   if (!url) return url;
-  if (url.includes('googleapis.com/drive/v3/files') && url.includes('alt=media')) {
-    const match = url.match(/files\/([a-zA-Z0-9_-]+)/);
+  // Convert unreliable drive.google.com/thumbnail links back to reliable alt=media links
+  if (url.includes('drive.google.com/thumbnail') && url.includes('id=')) {
+    const match = url.match(/id=([a-zA-Z0-9_-]+)/);
     if (match) {
-      return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800`;
+      return `https://www.googleapis.com/drive/v3/files/${match[1]}?alt=media&key=${import.meta.env.VITE_GOOGLE_API_KEY}&acknowledgeAbuse=true`;
     }
   }
   return url;

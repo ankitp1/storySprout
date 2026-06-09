@@ -35,8 +35,8 @@ const buildBookObj = (folderItem, contents, apiKey, seriesName) => {
   
   if (contents.imageFiles.length > 0) {
     const img = contents.imageFiles[0];
-    // Always use the persistent Google Drive media download link to prevent link expiry
-    coverUrl = `https://drive.google.com/thumbnail?id=${img.id}&sz=w800`;
+    // Always use the persistent Google Drive media download link to prevent link expiry on mobile
+    coverUrl = `https://www.googleapis.com/drive/v3/files/${img.id}?alt=media&key=${apiKey}&acknowledgeAbuse=true`;
     hasCustomCover = true;
   }
 
@@ -84,7 +84,7 @@ export const fetchBooksFromDrive = async (existingBooks = []) => {
     else if (itemContents.subFolders.length > 0) {
       const seriesName = item.name;
       const seriesCover = itemContents.imageFiles.length > 0 ? 
-        `https://drive.google.com/thumbnail?id=${itemContents.imageFiles[0].id}&sz=w800` : null;
+        `https://www.googleapis.com/drive/v3/files/${itemContents.imageFiles[0].id}?alt=media&key=${apiKey}&acknowledgeAbuse=true` : null;
       
       for (const subBookFolder of itemContents.subFolders) {
         if (existingMap.has(subBookFolder.id)) {
