@@ -410,6 +410,10 @@ const useStore = create(
             }
             
             count++;
+            if (count < book.chapters.length) {
+              // Throttle downloads to prevent Google Drive API burst rate limits
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
           }
 
           set((state) => ({

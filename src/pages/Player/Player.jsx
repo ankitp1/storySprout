@@ -278,6 +278,99 @@ export default function Player() {
     };
   }, [bookId, chapterIndex, updateProgress, flushCloudSync, book.type]);
 
+  // Auto-recover on visibility change (unlocking phone)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && audioError) {
+        console.log("App became visible, attempting to recover from audio error");
+        setAudioError(null);
+        if (audioRef.current) {
+          audioRef.current.load();
+          audioRef.current.currentTime = currentTime;
+          // Note: we don't auto-play here to prevent Safari blocking it.
+          // The user can just hit play again, but the state will be recovered.
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [audioError, currentTime]);
+
+  // Media Session API for Lock Screen Controls
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentChapter?.name || `Chapter ${chapterIndex + 1}`,
+        artist: book.author || 'StorySprout',
+        album: book.title,
+        artwork: [
+          { src: book.coverUrl || getFallbackCover(book.title, 512, 512), sizes: '512x512', type: 'image/jpeg' }
+        ]
+      });
+
+      // We attach handlers directly to the current state references
+      navigator.mediaSession.setActionHandler('play', togglePlay);
+      navigator.mediaSession.setActionHandler('pause', togglePlay);
+      navigator.mediaSession.setActionHandler('seekbackward', rewind15);
+      navigator.mediaSession.setActionHandler('previoustrack', chapterIndex > 0 ? prevChapter : null);
+      navigator.mediaSession.setActionHandler('nexttrack', chapterIndex < chapters.length - 1 ? nextChapter : null);
+    }
+  }, [book, currentChapter, chapterIndex, chapters.length, isPlaying]);
+
+  // Smart Background Pre-caching for Next Chapter
+  useEffect(() => {
+    if (book.type === 'youtube') return;
+    if (!isPlaying) return;
+
+    let timeoutId;
+    let active = true;
+
+    const preCacheNextChapter = async () => {
+      const nextChapterIndex = chapterIndex + 1;
+      if (nextChapterIndex >= chapters.length) return;
+      
+      const nextChapter = chapters[nextChapterIndex];
+      if (!nextChapter || !nextChapter.id) return;
+
+      try {
+        const { getOfflineAudio, saveOfflineAudio } = await import('../../lib/offlineDb');
+        
+        // Check if already downloaded
+        const existing = await getOfflineAudio(bookId, nextChapter.id);
+        if (existing) return; // Already cached
+
+        if (!active) return;
+
+        console.log(`Pre-caching next chapter: ${nextChapter.name}`);
+        const url = `https://www.googleapis.com/drive/v3/files/${nextChapter.id}?alt=media&key=${import.meta.env.VITE_GOOGLE_API_KEY}&acknowledgeAbuse=true`;
+        
+        const res = await fetch(url);
+        if (!res.ok) {
+          console.warn(`Failed to pre-cache next chapter (Status ${res.status})`);
+          return;
+        }
+
+        const blob = await res.blob();
+        if (active) {
+          await saveOfflineAudio(bookId, nextChapter.id, blob);
+          console.log(`Successfully pre-cached ${nextChapter.name}`);
+        }
+      } catch (err) {
+        console.warn('Error pre-caching next chapter:', err);
+      }
+    };
+
+    // Wait 10 seconds into the current chapter before fetching the next one
+    timeoutId = setTimeout(() => {
+      preCacheNextChapter();
+    }, 10000);
+
+    return () => {
+      active = false;
+      clearTimeout(timeoutId);
+    };
+  }, [bookId, chapterIndex, chapters, isPlaying, book.type]);
+
   // Load offline cover if available
   useEffect(() => {
     let active = true;
@@ -537,9 +630,35 @@ export default function Player() {
           ref={audioRef} 
           src={audioUrl || undefined} 
           onTimeUpdate={handleTimeUpdate} 
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
           onError={(e) => {
             const error = e.target.error;
             console.error("Audio player element error:", error);
+            
+            // Auto-recovery attempt for Network Errors (common on lock screen)
+            if (error && (error.code === 2 || error.code === 3)) {
+              console.log("Attempting automatic recovery for network error code:", error.code);
+              const retryCount = window.__audioRetryCount || 0;
+              if (retryCount < 3) {
+                window.__audioRetryCount = retryCount + 1;
+                setTimeout(() => {
+                   if (audioRef.current) {
+                     audioRef.current.load();
+                     audioRef.current.currentTime = currentTime;
+                     audioRef.current.play().then(() => {
+                       setAudioError(null);
+                       window.__audioRetryCount = 0; // reset on success
+                     }).catch(err => {
+                       console.error("Auto-recovery playback failed:", err);
+                       setAudioError("Unable to play this chapter. Connection dropped.");
+                     });
+                   }
+                }, 2000);
+                return; // skip showing error UI temporarily
+              }
+            }
+
             if (error && error.code === 4) {
               setAudioError("Media resource could not be loaded. This is often caused by Google Drive API rate limits (403 Forbidden). Try downloading the book instead.");
             } else {

@@ -118,13 +118,15 @@ const BookCard = ({
               if (window.confirm(`Remove offline download for "${book.title}"?`)) {
                 removeDownloadedBook(book);
               }
-            } else if (!isDownloading) {
+            } else if (!isDownloading || downloadProgress?.error) {
               downloadBook(book);
             }
           }}
           style={{
             position: 'absolute', top: '10px', left: '10px',
-            background: isDownloaded ? 'rgba(76, 175, 80, 0.95)' : isDownloading ? 'var(--primary)' : 'rgba(0,0,0,0.5)',
+            background: isDownloaded ? 'rgba(76, 175, 80, 0.95)' : 
+                        (isDownloading && downloadProgress?.error) ? '#e74c3c' :
+                        isDownloading ? 'var(--primary)' : 'rgba(0,0,0,0.5)',
             color: 'white', width: '36px', height: '36px',
             borderRadius: '50%', fontSize: '0.8rem', fontWeight: 'bold',
             boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
@@ -135,12 +137,19 @@ const BookCard = ({
           }}
           onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          title={isDownloaded ? "Delete offline download" : isDownloading ? `Downloading: ${downloadProgress?.status || ''}` : "Download for offline listening"}
+          title={isDownloaded ? "Delete offline download" : 
+                 (isDownloading && downloadProgress?.error) ? `Error: ${downloadProgress.error}. Click to retry.` :
+                 isDownloading ? `Downloading: ${downloadProgress?.status || ''}` : 
+                 "Download for offline listening"}
         >
           {isDownloading ? (
-            <span style={{ fontSize: '0.7rem' }}>
-              {Math.round((downloadProgress.current / downloadProgress.total) * 100)}%
-            </span>
+            downloadProgress.error ? (
+              <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>!</span>
+            ) : (
+              <span style={{ fontSize: '0.7rem' }}>
+                {downloadProgress.total ? Math.round((downloadProgress.current / downloadProgress.total) * 100) : 0}%
+              </span>
+            )
           ) : isDownloaded ? (
             <Trash2 size={16} />
           ) : (
