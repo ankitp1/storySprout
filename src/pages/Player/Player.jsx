@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import { ArrowLeft, Play, Pause, SkipBack, SkipForward, RotateCcw, Moon, AlertTriangle, Rewind } from 'lucide-react';
+import { ArrowLeft, Play, Pause, SkipBack, SkipForward, RotateCcw, Moon, AlertTriangle, Rewind, List, X } from 'lucide-react';
 import { getFallbackCover } from '../../lib/coverUtils';
 import './Player.css';
 
@@ -29,6 +29,7 @@ export default function Player() {
   const [duration, setDuration] = useState(0);
   const [sleepTimerRemaining, setSleepTimerRemaining] = useState(null);
   const [showSleepTimerMenu, setShowSleepTimerMenu] = useState(false);
+  const [showChaptersMenu, setShowChaptersMenu] = useState(false);
   const [hasAppliedSmartResume, setHasAppliedSmartResume] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [imgError, setImgError] = useState(false);
@@ -511,6 +512,19 @@ export default function Player() {
     }
   };
 
+  const jumpToChapter = (index) => {
+    if (index >= 0 && index < chapters.length && index !== chapterIndex) {
+      setAudioError(null);
+      setHasAppliedSmartResume(false);
+      setChapterIndex(index);
+      setIsPlaying(true);
+      if (book.type !== 'youtube') {
+        setTimeout(() => { if (audioRef.current) audioRef.current.play().catch(e => console.log(e)); }, 100);
+      }
+      setShowChaptersMenu(false);
+    }
+  };
+
   const nextChapter = () => {
     if (chapterIndex < chapters.length - 1) {
       setAudioError(null);
@@ -755,7 +769,30 @@ export default function Player() {
           </span>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem', position: 'relative' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem', position: 'relative', gap: '1rem' }}>
+          {chapters.length > 1 && (
+            <button 
+              onClick={() => setShowChaptersMenu(true)} 
+              style={{ 
+                color: 'var(--text-muted)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem', 
+                background: 'var(--bg-color)', 
+                padding: '0.5rem 1.5rem', 
+                borderRadius: '24px',
+                border: '2px solid var(--border)',
+                boxShadow: 'var(--shadow-sm)',
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+                flexShrink: 0
+              }}
+            >
+              <List size={20} />
+              <span>Chapters</span>
+            </button>
+          )}
           <button 
             onClick={() => setShowSleepTimerMenu(!showSleepTimerMenu)} 
             style={{ 
@@ -833,6 +870,67 @@ export default function Player() {
           </button>
         </div>
       </div>
+
+      {showChaptersMenu && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          zIndex: 100,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+          animation: 'fadeIn 0.2s ease-out'
+        }} onClick={() => setShowChaptersMenu(false)}>
+          <div style={{
+            background: 'var(--surface-color)',
+            borderTopLeftRadius: '32px',
+            borderTopRightRadius: '32px',
+            padding: '2rem 1.5rem',
+            maxHeight: '70vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 -20px 40px rgba(0,0,0,0.2)',
+            animation: 'slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', padding: '0 0.5rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-main)' }}>Chapters</h2>
+              <button onClick={() => setShowChaptersMenu(false)} className="btn-icon" style={{ background: 'var(--surface-light)', width: '40px', height: '40px' }}>
+                <X size={24} color="var(--text-main)" />
+              </button>
+            </div>
+            
+            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {chapters.map((ch, idx) => (
+                <div 
+                  key={ch.id || idx}
+                  onClick={() => jumpToChapter(idx)}
+                  style={{
+                    padding: '1rem',
+                    borderRadius: '16px',
+                    background: idx === chapterIndex ? 'var(--primary)' : 'var(--surface-light)',
+                    color: idx === chapterIndex ? 'white' : 'var(--text-main)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontWeight: 'bold',
+                    transition: 'all 0.2s',
+                    border: idx === chapterIndex ? 'none' : '1px solid var(--border)'
+                  }}
+                >
+                  <span style={{ fontSize: '1.1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {ch.name || `Chapter ${idx + 1}`}
+                  </span>
+                  {idx === chapterIndex && <Play size={20} fill="white" />}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
