@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Lock, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import useStore from '../../store/useStore';
 
 export default function PINEntry({ onSuccess, isModal, onCancel }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
   const navigate = useNavigate();
-  
-  const CORRECT_PIN = '6556'; // In a real app, this would be env var or user set
+
+  const CORRECT_PIN = useStore(state => state.adminPin);
 
   const handleKeyPress = (num) => {
     setError(false);

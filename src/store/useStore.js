@@ -46,8 +46,9 @@ const useStore = create(
 
       // Admin State
       isAdmin: false,
-      adminPin: '1234', // Default for MVP
+      adminPin: '6556', // Default; parent-changeable in Admin Dashboard
       setAdminStatus: (status) => set({ isAdmin: status }),
+      setAdminPin: (pin) => set({ adminPin: pin }),
 
       // Profiles State
       profiles: [],
@@ -255,12 +256,25 @@ const useStore = create(
 
       // Analytics & Discussion
       listeningStats: {},
+      // Days each profile listened on, as 'YYYY-MM-DD' strings (for streaks)
+      listeningDays: {},
       updateListeningStats: (bookId, currentTimeAdded) => {
         set((state) => {
           if (!state.activeProfileId) return state;
           const profileStats = state.listeningStats[state.activeProfileId] || {};
           const currentStats = profileStats[bookId] || { totalTimeSeconds: 0, sessionsCount: 0 };
+
+          const today = new Date().toISOString().slice(0, 10);
+          const profileDays = state.listeningDays?.[state.activeProfileId] || [];
+          const listeningDays = profileDays.includes(today)
+            ? state.listeningDays
+            : {
+                ...state.listeningDays,
+                [state.activeProfileId]: [...profileDays, today].slice(-366)
+              };
+
           return {
+            listeningDays,
             listeningStats: {
               ...state.listeningStats,
               [state.activeProfileId]: {
@@ -651,7 +665,7 @@ const useStore = create(
     {
       name: 'rowans-library-storage', // name of the item in the storage (must be unique)
       storage: createJSONStorage(() => localforage),
-      version: 4, // Increment version for migration
+      version: 5, // Increment version for migration
       migrate: (persistedState, version) => {
         let state = persistedState;
         if (version === 0 || version === 1 || version === undefined) {
@@ -714,6 +728,11 @@ const useStore = create(
               coverUrl: normalizeCoverUrl(book.coverUrl)
             }));
           }
+        }
+        if (version < 5) {
+          // adminPin was never user-facing before; the working PIN was
+          // hardcoded as 6556 in PINEntry, so carry that forward.
+          state = { ...state, adminPin: '6556' };
         }
         return state;
       }

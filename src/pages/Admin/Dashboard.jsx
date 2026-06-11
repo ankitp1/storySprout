@@ -35,7 +35,7 @@ const normalizeCoverUrl = (url) => {
 };
 
 export default function Dashboard() {
-  const { books, addBook, removeBook, isAdmin, setAdminStatus, profiles, activeProfileId, resetApprovedBooks, sessionLimits, setSessionLimit, updateProfile } = useStore();
+  const { books, addBook, removeBook, isAdmin, setAdminStatus, profiles, activeProfileId, resetApprovedBooks, sessionLimits, setSessionLimit, updateProfile, adminPin, setAdminPin } = useStore();
   const navigate = useNavigate();
   const [isSyncing, setIsSyncing] = useState(false);
   const [imgError, setImgError] = useState({});
@@ -374,6 +374,36 @@ export default function Dashboard() {
               >
                 <Lock size={16} />
                 Manage Profile PIN
+              </button>
+
+              <button
+                onClick={() => {
+                  const newPinVal = window.prompt(`Current admin PIN is: ${adminPin}\n\nEnter a new 4-digit admin PIN (used to access this dashboard and approve books):`, adminPin);
+
+                  if (newPinVal !== null) {
+                    const cleanPin = newPinVal.replace(/\D/g, '').slice(0, 4);
+                    if (cleanPin.length !== 4) {
+                      alert('Admin PIN must be exactly 4 digits!');
+                      return;
+                    }
+                    setAdminPin(cleanPin);
+                    alert(`Admin PIN updated to ${cleanPin}.`);
+                  }
+                }}
+                className="btn-secondary"
+                style={{
+                  borderColor: 'var(--primary)',
+                  color: 'var(--primary)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.9rem',
+                  padding: '0.5rem 1.25rem',
+                  height: '44px'
+                }}
+              >
+                <Key size={16} />
+                Change Admin PIN
               </button>
             </div>
           )}

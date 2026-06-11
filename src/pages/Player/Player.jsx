@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
-import { ArrowLeft, Play, Pause, SkipBack, SkipForward, RotateCcw, Moon, AlertTriangle, Rewind, List, X } from 'lucide-react';
+import { ArrowLeft, Play, Pause, SkipBack, SkipForward, RotateCcw, Moon, AlertTriangle, Rewind, List, X, Gauge } from 'lucide-react';
 import { getFallbackCover } from '../../lib/coverUtils';
 import './Player.css';
+
+const PLAYBACK_SPEEDS = [0.75, 1, 1.25, 1.5];
 
 export default function Player() {
   const { bookId } = useParams();
@@ -34,6 +36,10 @@ export default function Player() {
   const [toastMsg, setToastMsg] = useState('');
   const [imgError, setImgError] = useState(false);
   const [audioError, setAudioError] = useState(null);
+  const [playbackRate, setPlaybackRate] = useState(() => {
+    const saved = parseFloat(localStorage.getItem('storysprout-playback-rate'));
+    return PLAYBACK_SPEEDS.includes(saved) ? saved : 1;
+  });
 
   // Offline State & Resolvers
   const [audioUrl, setAudioUrl] = useState(null);
@@ -444,6 +450,21 @@ export default function Player() {
     }
   }, [audioUrl, book.type]);
 
+  // Apply playback speed (defaultPlaybackRate so it survives load())
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.defaultPlaybackRate = playbackRate;
+      audio.playbackRate = playbackRate;
+    }
+    localStorage.setItem('storysprout-playback-rate', String(playbackRate));
+  }, [playbackRate, audioUrl]);
+
+  const cyclePlaybackSpeed = () => {
+    const idx = PLAYBACK_SPEEDS.indexOf(playbackRate);
+    setPlaybackRate(PLAYBACK_SPEEDS[(idx + 1) % PLAYBACK_SPEEDS.length]);
+  };
+
   const togglePlay = () => {
     setAudioError(null);
     if (book.type === 'youtube') {
@@ -517,10 +538,8 @@ export default function Player() {
       setAudioError(null);
       setHasAppliedSmartResume(false);
       setChapterIndex(index);
+      // The audioUrl effect resumes playback once the new chapter source loads
       setIsPlaying(true);
-      if (book.type !== 'youtube') {
-        setTimeout(() => { if (audioRef.current) audioRef.current.play().catch(e => console.log(e)); }, 100);
-      }
       setShowChaptersMenu(false);
     }
   };
@@ -531,9 +550,6 @@ export default function Player() {
       setHasAppliedSmartResume(false);
       setChapterIndex(chapterIndex + 1);
       setIsPlaying(true);
-      if (book.type !== 'youtube') {
-        setTimeout(() => { if (audioRef.current) audioRef.current.play().catch(e => console.log(e)); }, 100);
-      }
     }
   };
 
@@ -543,9 +559,6 @@ export default function Player() {
       setHasAppliedSmartResume(false);
       setChapterIndex(chapterIndex - 1);
       setIsPlaying(true);
-      if (book.type !== 'youtube') {
-        setTimeout(() => { if (audioRef.current) audioRef.current.play().catch(e => console.log(e)); }, 100);
-      }
     }
   };
 
@@ -814,6 +827,30 @@ export default function Player() {
             <Moon size={20} fill={sleepTimerRemaining ? 'var(--primary)' : 'none'} />
             {sleepTimerRemaining ? <span>{formatTime(sleepTimerRemaining)}</span> : <span>Sleep Timer</span>}
           </button>
+          {book.type !== 'youtube' && (
+            <button
+              onClick={cyclePlaybackSpeed}
+              title="Playback Speed"
+              style={{
+                color: playbackRate !== 1 ? 'var(--primary)' : 'var(--text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                background: 'var(--bg-color)',
+                padding: '0.5rem 1.5rem',
+                borderRadius: '24px',
+                border: '2px solid var(--border)',
+                boxShadow: 'var(--shadow-sm)',
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+                flexShrink: 0
+              }}
+            >
+              <Gauge size={20} />
+              <span>{playbackRate}x</span>
+            </button>
+          )}
           {showSleepTimerMenu && (
             <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '1rem', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', zIndex: 10 }}>
               <button className="btn-secondary" onClick={() => setSleepTimer(10)}>10m</button>

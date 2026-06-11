@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import useStore from '../../store/useStore';
 import { Play, Settings, Users, Search, Lock, Unlock, HelpCircle, Sun, Moon, Download, Trash2, X, LayoutGrid } from 'lucide-react';
 import { getFallbackCover } from '../../lib/coverUtils';
+import { getListeningStreak } from '../../lib/streaks';
 import PINEntry from '../../components/ParentDashboard/PINEntry';
 import OnboardingTour from '../../components/OnboardingTour';
 
@@ -250,6 +251,8 @@ export default function Library() {
   const updateProfile = useStore(state => state.updateProfile);
   const isDarkMode = useStore(state => state.isDarkMode);
   const toggleDarkMode = useStore(state => state.toggleDarkMode);
+  const listeningDaysArr = useStore(state => state.listeningDays?.[state.activeProfileId]);
+  const listeningStreak = getListeningStreak(listeningDaysArr);
   const navigate = useNavigate();
 
   // Offline support
@@ -498,6 +501,27 @@ export default function Library() {
           */}
 
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {/* Listening Streak Badge */}
+            {listeningStreak >= 2 && (
+              <div
+                title={`${listeningStreak}-day listening streak! Listen every day to keep it going.`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  background: 'linear-gradient(135deg, var(--tertiary), var(--warning))',
+                  color: '#2D3436',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '24px',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold',
+                  boxShadow: 'var(--shadow-sm)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                🔥 {listeningStreak} days
+              </div>
+            )}
             {/* Theme Toggle Button */}
             <button 
               className="btn-icon" 
