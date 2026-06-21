@@ -42,7 +42,8 @@
       -webkit-appearance: none;
     }
     .topbar.has-back .title { padding-left: 70px; }
-    .wrap { padding: 12px; }
+    .topbar .title { display: inline-block; }
+    .wrap { padding: 12px; max-width: 1100px; margin: 0 auto; }
     .note { color: #888; font-size: 14px; padding: 8px 4px; }
     .err { color: #c0392b; }
 
@@ -81,6 +82,8 @@
 
     /* Detail view */
     .detail { display: none; }
+    .detail:after { content: ""; display: block; clear: both; }
+    .player-col, .chapters-col { width: 100%; }
     .detail .hero { text-align: center; padding: 8px 0 4px; }
     .detail .hero img, .detail .hero .ph2 {
       width: 150px; height: 200px; border-radius: 10px; display: inline-block;
@@ -160,6 +163,38 @@
     .retry {
       background: #ff6b6b; color: #fff; border: 0; border-radius: 8px;
       padding: 10px 18px; font-size: 15px; -webkit-appearance: none; margin-top: 8px;
+    }
+
+    /* ===== Responsive: tablets / larger phones ===== */
+    /* 3-up grid and taller covers once there's room (iPad portrait ~768px). */
+    @media (min-width: 600px) {
+      .topbar { font-size: 22px; padding: 14px 18px; }
+      .card { width: 29.33%; margin: 2%; }
+      .cover, .cover img { height: 220px; }
+      .card .label { font-size: 15px; }
+      .detail .hero img, .detail .hero .ph2 { width: 190px; height: 250px; }
+      .detail .ph2 { line-height: 250px; }
+      .ctrl { width: 58px; height: 58px; font-size: 22px; }
+      .ctrl.small { width: 50px; height: 50px; }
+      .ctrl.play { width: 72px; height: 72px; font-size: 30px; }
+    }
+
+    /* 4-up grid on wide screens (iPad landscape ~1024px). */
+    @media (min-width: 900px) {
+      .card { width: 21%; margin: 2%; }
+      .cover, .cover img { height: 240px; }
+    }
+
+    /* Landscape on tablets: cover + controls on the left, chapters on the
+       right so nothing needs scrolling past the player. */
+    @media (min-width: 760px) and (orientation: landscape) {
+      .player-col {
+        float: left; width: 42%; padding-right: 20px;
+        position: -webkit-sticky; position: sticky; top: 12px;
+      }
+      .chapters-col { float: left; width: 58%; }
+      .detail h2 { margin-top: 4px; }
+      .offline { margin-left: 0; margin-right: 0; }
     }
   </style>
 </head>
@@ -396,7 +431,8 @@
       var heroImg = current.cover
         ? '<img src="' + current.cover + '" alt="">'
         : '<span class="ph2">' + esc(current.title) + '</span>';
-      var html = '<div class="hero">' + heroImg + '</div>'
+      var html = '<div class="player-col">'
+        + '<div class="hero">' + heroImg + '</div>'
         + '<h2>' + esc(current.title) + '</h2>'
         + (current.series ? '<div class="sub">' + esc(current.series) + '</div>' : '')
         + '<div class="nowplaying" id="nowPlaying"></div>'
@@ -413,12 +449,15 @@
         +   '<button class="ctrl" id="fwdBtn15" type="button" title="Forward 15s">15&#8631;</button>'
         +   '<button class="ctrl small" id="nextBtn" type="button" title="Next chapter">&#9197;</button>'
         + '</div>'
+        + '</div>'
+        + '<div class="chapters-col">'
         + '<div class="offline">'
         +   '📶 Listening offline? Download chapters into the VLC app to play them with no connection.'
         +   '<button class="dlall" id="dlAllBtn" type="button">&#8681; Send whole book to VLC</button>'
         +   '<div class="hint" id="vlcHint">If nothing happened, install the free <b>VLC</b> app from the App Store, then tap again.</div>'
         + '</div>'
-        + '<div id="chapterList"></div>';
+        + '<div id="chapterList"></div>'
+        + '</div>';
       detailView.innerHTML = html;
 
       audioEl = document.getElementById('player');
