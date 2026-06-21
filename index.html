@@ -9,6 +9,15 @@
       (function () {
         try {
           if (location.pathname.indexOf('legacy') !== -1) return;
+          // Chrome < 70 can't reliably run the React 19 / Vite module bundle
+          var ua = navigator.userAgent || '';
+          var chromeMatch = ua.match(/Chrome\/(\d+)/);
+          if (chromeMatch && parseInt(chromeMatch[1], 10) < 70) {
+            var k = '%VITE_GOOGLE_API_KEY%';
+            var f = '%VITE_GOOGLE_DRIVE_FOLDER_ID%';
+            location.replace('/legacy.html?k=' + encodeURIComponent(k) + '&f=' + encodeURIComponent(f));
+            return;
+          }
           var hasFetch = ('fetch' in window);
           var hasPromise = ('Promise' in window);
           var hasGrid = !!(window.CSS && CSS.supports && CSS.supports('display', 'grid'));
