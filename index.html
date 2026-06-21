@@ -2,6 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Legacy fallback: send pre-modern browsers (e.g. iPad on iOS 9.3.5,
+         which cannot run React 19 / CSS grid / fetch) to a plain ES5 player.
+         Written in ES5 and placed first so it runs before the module bundle. -->
+    <script>
+      (function () {
+        try {
+          if (location.pathname.indexOf('legacy') !== -1) return;
+          var hasFetch = ('fetch' in window);
+          var hasPromise = ('Promise' in window);
+          var hasGrid = !!(window.CSS && CSS.supports && CSS.supports('display', 'grid'));
+          if (hasFetch && hasPromise && hasGrid) return; // modern browser: continue to app
+          var k = '%VITE_GOOGLE_API_KEY%';
+          var f = '%VITE_GOOGLE_DRIVE_FOLDER_ID%';
+          location.replace('/legacy.html?k=' + encodeURIComponent(k) + '&f=' + encodeURIComponent(f));
+        } catch (e) {}
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#FF6B6B" />
