@@ -9,22 +9,22 @@
       (function () {
         try {
           if (location.pathname.indexOf('legacy') !== -1) return;
-          // Chrome < 70 can't reliably run the React 19 / Vite module bundle
-          var ua = navigator.userAgent || '';
-          var chromeMatch = ua.match(/Chrome\/(\d+)/);
-          if (chromeMatch && parseInt(chromeMatch[1], 10) < 70) {
-            var k = '%VITE_GOOGLE_API_KEY%';
-            var f = '%VITE_GOOGLE_DRIVE_FOLDER_ID%';
+          var k = '%VITE_GOOGLE_API_KEY%';
+          var f = '%VITE_GOOGLE_DRIVE_FOLDER_ID%';
+          function goLegacy() {
             location.replace('/legacy.html?k=' + encodeURIComponent(k) + '&f=' + encodeURIComponent(f));
-            return;
           }
+          var ua = navigator.userAgent || '';
+          // On iOS every browser is WebKit; Chrome reports as "CriOS", not "Chrome".
+          // Old desktop Chrome (< 70) and old iOS Chrome (CriOS) can't run the
+          // React 19 / Vite module bundle, so route them to the legacy player.
+          var chromeMatch = ua.match(/(?:CriOS|Chrome)\/(\d+)/);
+          if (chromeMatch && parseInt(chromeMatch[1], 10) < 70) { goLegacy(); return; }
           var hasFetch = ('fetch' in window);
           var hasPromise = ('Promise' in window);
           var hasGrid = !!(window.CSS && CSS.supports && CSS.supports('display', 'grid'));
           if (hasFetch && hasPromise && hasGrid) return; // modern browser: continue to app
-          var k = '%VITE_GOOGLE_API_KEY%';
-          var f = '%VITE_GOOGLE_DRIVE_FOLDER_ID%';
-          location.replace('/legacy.html?k=' + encodeURIComponent(k) + '&f=' + encodeURIComponent(f));
+          goLegacy();
         } catch (e) {}
       })();
     </script>
