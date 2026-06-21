@@ -65,6 +65,15 @@
     .continue .cont-s { color: #888; font-size: 13px; }
     .err { color: #c0392b; }
 
+    /* Search / filter box */
+    .searchrow { padding: 4px 4px 10px; }
+    .search {
+      width: 100%; -webkit-appearance: none; box-sizing: border-box;
+      border: 1px solid #e2e8f0; border-radius: 22px; padding: 11px 16px;
+      font-size: 16px; background: #fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>") no-repeat 14px center;
+      padding-left: 42px;
+    }
+
     /* Book grid via float/flex, NOT css grid */
     .books { font-size: 0; }
     .card {
@@ -79,8 +88,10 @@
       font-size: 14px;
       cursor: pointer;
     }
+    .card:active { background: #f1f5f9; -webkit-transform: scale(0.97); transform: scale(0.97); }
     .cover {
       display: block;
+      position: relative;
       width: 100%;
       height: 180px;
       background: #dfe6e9;
@@ -88,6 +99,16 @@
       overflow: hidden;
     }
     .cover img { width: 100%; height: 180px; }
+    /* Progress / finished badges on covers */
+    .badge {
+      position: absolute; top: 6px; right: 6px; z-index: 2;
+      background: rgba(255,107,107,0.95); color: #fff; font-weight: bold;
+      font-size: 12px; border-radius: 12px; padding: 3px 8px;
+    }
+    .badge.done { background: rgba(34,153,84,0.95); }
+    .pbar { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgba(0,0,0,0.12); z-index: 2; }
+    .pbar i { display: block; height: 5px; background: #ff6b6b; }
+    .pbar.done i { background: #229954; }
     .cover .ph {
       display: block;
       padding: 14px 8px;
@@ -135,6 +156,9 @@
     .ctrl.play { width: 64px; height: 64px; background: #ff6b6b; color: #fff;
       border-color: #ff6b6b; font-size: 26px; }
     .ctrl[disabled] { opacity: 0.35; }
+    .ctrl:active { -webkit-transform: scale(0.92); transform: scale(0.92); }
+    .ctrl.play:active { background: #ee5a5a; }
+    .chapter:active, .vlcbtn:active, .pill:active { background: #eef2f6; }
 
     /* Secondary controls: speed + sleep timer */
     .controls2 { text-align: center; padding: 0 0 12px; }
@@ -244,6 +268,9 @@
     <div class="note">Simplified player for older devices.</div>
     <div id="libraryView">
       <div class="continue" id="continueCard"></div>
+      <div class="searchrow" id="searchRow" style="display:none">
+        <input class="search" id="searchBox" type="search" placeholder="Search books&hellip;" autocomplete="off" autocorrect="off" autocapitalize="none">
+      </div>
       <div class="spin" id="status">Loading your library&hellip;</div>
       <div class="books" id="books"></div>
     </div>
@@ -409,20 +436,46 @@
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
+    // Fraction (0..1) of a book completed, plus a "finished" flag.
+    function bookProgress(b) {
+      if (isFinished(b.id)) return 1;
+      var prog = loadProgress()[b.id];
+      var total = b.chapters.length || 1;
+      if (!prog || typeof prog.c !== 'number') return 0;
+      // Count completed chapters as whole units; the current one is partial.
+      return Math.min(1, prog.c / total);
+    }
+
+    function coverInner(b) {
+      var pct = Math.round(bookProgress(b) * 100);
+      var done = isFinished(b.id);
+      var badge = '';
+      if (done) badge = '<span class="badge done">&#10003; Done</span>';
+      else if (pct > 0) badge = '<span class="badge">' + pct + '%</span>';
+      var bar = (pct > 0)
+        ? '<span class="pbar' + (done ? ' done' : '') + '"><i style="width:' + pct + '%"></i></span>'
+        : '';
+      var inner = b.cover
+        ? '<img alt="" data-src="' + b.cover + '">'
+        : '<span class="ph">' + esc(b.title) + '</span>';
+      return badge + inner + bar;
+    }
+
     function renderLibrary() {
       if (!books.length) {
         statusEl.innerHTML = 'No books found yet. Ask a grown-up to add some.';
         return;
       }
       statusEl.style.display = 'none';
+      var sr = document.getElementById('searchRow');
+      if (sr && books.length > 4) sr.style.display = 'block';
       var html = '';
       for (var i = 0; i < books.length; i++) {
         var b = books[i];
-        var cover = b.cover
-          ? '<span class="cover"><img src="' + b.cover + '" alt=""></span>'
-          : '<span class="cover"><span class="ph">' + esc(b.title) + '</span></span>';
         var series = b.series ? '<div class="series">' + esc(b.series) + '</div>' : '';
-        html += '<div class="card" data-i="' + i + '">' + cover
+        var hay = (b.title + ' ' + (b.series || '')).toLowerCase();
+        html += '<div class="card" data-i="' + i + '" data-hay="' + esc(hay) + '">'
+              + '<span class="cover">' + coverInner(b) + '</span>'
               + '<div class="label">' + esc(b.title) + series + '</div></div>';
       }
       booksEl.innerHTML = html;
@@ -430,7 +483,42 @@
       for (var c = 0; c < cards.length; c++) {
         cards[c].onclick = function () { openBook(parseInt(this.getAttribute('data-i'), 10)); };
       }
+      lazyLoadCovers();
       renderContinue();
+    }
+
+    // ---- Lazy-load cover images (no IntersectionObserver on iOS 9) ----
+    function lazyLoadCovers() {
+      var imgs = booksEl.getElementsByTagName('img');
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      for (var i = 0; i < imgs.length; i++) {
+        var img = imgs[i];
+        if (img.getAttribute('data-src') && img.parentNode.offsetParent !== null) {
+          var rect = img.getBoundingClientRect();
+          if (rect.top < vh + 300 && rect.bottom > -300) {
+            img.src = img.getAttribute('data-src');
+            img.removeAttribute('data-src');
+          }
+        }
+      }
+    }
+    var lazyTick = null;
+    function scheduleLazy() {
+      if (lazyTick) return;
+      lazyTick = setTimeout(function () { lazyTick = null; lazyLoadCovers(); }, 150);
+    }
+    window.addEventListener('scroll', scheduleLazy);
+    window.addEventListener('resize', scheduleLazy);
+
+    // ---- Search / filter ----
+    function applyFilter(q) {
+      q = (q || '').toLowerCase().replace(/^\s+|\s+$/g, '');
+      var cards = booksEl.getElementsByClassName('card');
+      for (var i = 0; i < cards.length; i++) {
+        var hay = cards[i].getAttribute('data-hay') || '';
+        cards[i].style.display = (!q || hay.indexOf(q) !== -1) ? 'inline-block' : 'none';
+      }
+      lazyLoadCovers();
     }
 
     function bookIndexById(id) {
@@ -473,6 +561,20 @@
         localStorage.setItem('ss_legacy_progress', JSON.stringify(p));
       } catch (e) {}
     }
+
+    // ---- Finished books ----
+    function loadFinished() {
+      try { return JSON.parse(localStorage.getItem('ss_legacy_finished') || '{}'); }
+      catch (e) { return {}; }
+    }
+    function setFinished(bookId, val) {
+      try {
+        var f = loadFinished();
+        if (val) f[bookId] = 1; else delete f[bookId];
+        localStorage.setItem('ss_legacy_finished', JSON.stringify(f));
+      } catch (e) {}
+    }
+    function isFinished(bookId) { return !!loadFinished()[bookId]; }
 
     // ---- Last-opened book (for the continue-listening card) ----
     function setLastBook(bookId) {
@@ -590,8 +692,14 @@
       audioEl.addEventListener('play', function () { wantPlaying = true; hideResume(); updatePlayIcon(); });
       audioEl.addEventListener('pause', updatePlayIcon);
       audioEl.addEventListener('ended', function () {
-        if (currentChapter < current.chapters.length - 1) playChapter(currentChapter + 1, true);
-        else updatePlayIcon();
+        if (currentChapter < current.chapters.length - 1) {
+          playChapter(currentChapter + 1, true);
+        } else {
+          // Reached the end of the last chapter: mark the book finished.
+          wantPlaying = false;
+          setFinished(current.id, true);
+          updatePlayIcon();
+        }
       });
 
       playChapter(currentChapter, false, resumeTime);
@@ -858,7 +966,7 @@
       topbar.className = 'topbar';
       backBtn.style.display = 'none';
       topTitle.innerHTML = 'StorySprout';
-      renderContinue();
+      renderLibrary(); // refresh progress badges for the book we just left
     };
 
     // ---- Recover from iOS suspending audio (screen lock / app switch) ----
@@ -887,6 +995,14 @@
     }
     window.addEventListener('pageshow', tryResume);
     window.addEventListener('focus', tryResume);
+
+    // Search box
+    var searchBox = document.getElementById('searchBox');
+    if (searchBox) {
+      var onSearch = function () { applyFilter(searchBox.value); };
+      searchBox.addEventListener('input', onSearch);
+      searchBox.addEventListener('keyup', onSearch);
+    }
 
     loadLibrary();
   })();
