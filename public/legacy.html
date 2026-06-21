@@ -45,6 +45,24 @@
     .topbar .title { display: inline-block; }
     .wrap { padding: 12px; max-width: 1100px; margin: 0 auto; }
     .note { color: #888; font-size: 14px; padding: 8px 4px; }
+
+    /* Continue-listening card */
+    .continue {
+      display: none; background: #fff; border: 1px solid #e2e8f0;
+      border-left: 6px solid #ff6b6b; border-radius: 10px; padding: 10px;
+      margin: 0 4px 12px; cursor: pointer; overflow: hidden;
+    }
+    .continue:after { content: ""; display: block; clear: both; }
+    .continue .cont-cover {
+      float: left; width: 56px; height: 56px; border-radius: 8px;
+      background: #dfe6e9; overflow: hidden; margin-right: 12px; text-align: center;
+    }
+    .continue .cont-cover img { width: 56px; height: 56px; }
+    .continue .cont-txt { overflow: hidden; }
+    .continue .cont-k { color: #ff6b6b; font-size: 12px; font-weight: bold;
+      text-transform: uppercase; letter-spacing: 0.5px; }
+    .continue .cont-t { font-weight: bold; font-size: 16px; margin: 2px 0; }
+    .continue .cont-s { color: #888; font-size: 13px; }
     .err { color: #c0392b; }
 
     /* Book grid via float/flex, NOT css grid */
@@ -117,6 +135,23 @@
     .ctrl.play { width: 64px; height: 64px; background: #ff6b6b; color: #fff;
       border-color: #ff6b6b; font-size: 26px; }
     .ctrl[disabled] { opacity: 0.35; }
+
+    /* Secondary controls: speed + sleep timer */
+    .controls2 { text-align: center; padding: 0 0 12px; }
+    .pill {
+      -webkit-appearance: none; background: #fff; border: 1px solid #e2e8f0;
+      border-radius: 18px; padding: 8px 14px; margin: 0 5px; font-size: 14px;
+      font-weight: bold; color: #2d3436; min-width: 92px;
+    }
+    .pill.on { background: #ff6b6b; color: #fff; border-color: #ff6b6b; }
+
+    /* Resume overlay when iOS suspends audio (lock / app switch) */
+    .resume {
+      display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+      background: #ff6b6b; color: #fff; text-align: center; padding: 16px;
+      font-size: 17px; font-weight: bold; cursor: pointer;
+      -webkit-box-shadow: 0 -2px 8px rgba(0,0,0,0.2); box-shadow: 0 -2px 8px rgba(0,0,0,0.2);
+    }
     .chrow { display: block; margin-bottom: 8px; font-size: 0; }
     .chapter {
       display: inline-block;
@@ -148,6 +183,7 @@
       -webkit-appearance: none;
       height: 100%;
     }
+    .vlcbtn.done { background: #e8590c; color: #fff; border-color: #e8590c; }
     /* Offline / download-to-VLC banner */
     .offline {
       background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px;
@@ -207,11 +243,14 @@
   <div class="wrap">
     <div class="note">Simplified player for older devices.</div>
     <div id="libraryView">
+      <div class="continue" id="continueCard"></div>
       <div class="spin" id="status">Loading your library&hellip;</div>
       <div class="books" id="books"></div>
     </div>
     <div class="detail" id="detailView"></div>
   </div>
+
+  <div class="resume" id="resumeBar">&#9658; Tap to resume playback</div>
 
   <script>
   (function () {
@@ -391,6 +430,35 @@
       for (var c = 0; c < cards.length; c++) {
         cards[c].onclick = function () { openBook(parseInt(this.getAttribute('data-i'), 10)); };
       }
+      renderContinue();
+    }
+
+    function bookIndexById(id) {
+      for (var i = 0; i < books.length; i++) { if (books[i].id === id) return i; }
+      return -1;
+    }
+
+    function renderContinue() {
+      var card = document.getElementById('continueCard');
+      if (!card) return;
+      var lastId = getLastBook();
+      var idx = lastId ? bookIndexById(lastId) : -1;
+      if (idx < 0) { card.style.display = 'none'; return; }
+      var b = books[idx];
+      var prog = loadProgress()[b.id];
+      var chIdx = (prog && typeof prog.c === 'number') ? prog.c : 0;
+      var chName = (b.chapters[chIdx] && b.chapters[chIdx].name) || '';
+      var cover = b.cover
+        ? '<span class="cont-cover"><img src="' + b.cover + '" alt=""></span>'
+        : '<span class="cont-cover"></span>';
+      card.innerHTML = cover
+        + '<div class="cont-txt">'
+        +   '<div class="cont-k">&#9658; Continue listening</div>'
+        +   '<div class="cont-t">' + esc(b.title) + '</div>'
+        +   '<div class="cont-s">' + esc(chName) + '</div>'
+        + '</div>';
+      card.style.display = 'block';
+      card.onclick = function () { openBook(idx); };
     }
 
     // ---- Progress persistence ----
@@ -406,14 +474,54 @@
       } catch (e) {}
     }
 
+    // ---- Last-opened book (for the continue-listening card) ----
+    function setLastBook(bookId) {
+      try { localStorage.setItem('ss_legacy_last', bookId); } catch (e) {}
+    }
+    function getLastBook() {
+      try { return localStorage.getItem('ss_legacy_last'); } catch (e) { return null; }
+    }
+
+    // ---- "Sent to VLC" memory ----
+    function loadVlc() {
+      try { return JSON.parse(localStorage.getItem('ss_legacy_vlc') || '{}'); }
+      catch (e) { return {}; }
+    }
+    function markVlc(bookId, chapterIndex) {
+      try {
+        var v = loadVlc();
+        if (!v[bookId]) v[bookId] = {};
+        v[bookId][chapterIndex] = 1;
+        localStorage.setItem('ss_legacy_vlc', JSON.stringify(v));
+      } catch (e) {}
+    }
+    function isVlcDone(bookId, chapterIndex) {
+      var v = loadVlc();
+      return !!(v[bookId] && v[bookId][chapterIndex]);
+    }
+
+    // ---- Playback speed ----
+    var SPEEDS = [1, 1.25, 1.5, 0.75];
+    function getSpeed() {
+      try {
+        var s = parseFloat(localStorage.getItem('ss_legacy_speed'));
+        return (s && s > 0) ? s : 1;
+      } catch (e) { return 1; }
+    }
+    function setSpeed(s) {
+      try { localStorage.setItem('ss_legacy_speed', String(s)); } catch (e) {}
+    }
+
     // ---- Detail / player view ----
     var current = null;     // current book
     var currentChapter = 0;
     var audioEl = null;
     var lastSaved = 0;
+    var wantPlaying = false; // user's intent, used to recover after iOS suspends audio
 
     function openBook(index) {
       current = books[index];
+      setLastBook(current.id);
       currentChapter = 0;
       var saved = loadProgress()[current.id];
       var resumeTime = 0;
@@ -449,6 +557,10 @@
         +   '<button class="ctrl" id="fwdBtn15" type="button" title="Forward 15s">15&#8631;</button>'
         +   '<button class="ctrl small" id="nextBtn" type="button" title="Next chapter">&#9197;</button>'
         + '</div>'
+        + '<div class="controls2">'
+        +   '<button class="pill" id="speedBtn" type="button">Speed 1&times;</button>'
+        +   '<button class="pill" id="sleepBtn" type="button">&#127769; Sleep</button>'
+        + '</div>'
         + '</div>'
         + '<div class="chapters-col">'
         + '<div class="offline">'
@@ -475,7 +587,7 @@
       });
       audioEl.addEventListener('loadedmetadata', updateSeek);
       audioEl.addEventListener('durationchange', updateSeek);
-      audioEl.addEventListener('play', updatePlayIcon);
+      audioEl.addEventListener('play', function () { wantPlaying = true; hideResume(); updatePlayIcon(); });
       audioEl.addEventListener('pause', updatePlayIcon);
       audioEl.addEventListener('ended', function () {
         if (currentChapter < current.chapters.length - 1) playChapter(currentChapter + 1, true);
@@ -525,8 +637,8 @@
       var seek = document.getElementById('seek');
       document.getElementById('playBtn').onclick = function () {
         if (!audioEl) return;
-        if (audioEl.paused) { try { audioEl.play(); } catch (e) {} }
-        else audioEl.pause();
+        if (audioEl.paused) { wantPlaying = true; hideResume(); try { audioEl.play(); } catch (e) {} }
+        else { wantPlaying = false; audioEl.pause(); }
       };
       document.getElementById('backBtn15').onclick = function () {
         if (audioEl) audioEl.currentTime = Math.max(0, audioEl.currentTime - 15);
@@ -551,17 +663,92 @@
       seek.addEventListener('change', commitSeek);
       seek.addEventListener('touchend', commitSeek);
       seek.addEventListener('mouseup', commitSeek);
+
+      // Speed control
+      var speedBtn = document.getElementById('speedBtn');
+      updateSpeedLabel();
+      speedBtn.onclick = function () {
+        var cur = getSpeed();
+        var idx = 0;
+        for (var i = 0; i < SPEEDS.length; i++) { if (SPEEDS[i] === cur) { idx = i; break; } }
+        var next = SPEEDS[(idx + 1) % SPEEDS.length];
+        setSpeed(next);
+        applySpeed();
+        updateSpeedLabel();
+      };
+
+      // Sleep timer
+      var sleepBtn = document.getElementById('sleepBtn');
+      sleepBtn.onclick = function () { cycleSleep(); };
+    }
+
+    function applySpeed() {
+      if (!audioEl) return;
+      var s = getSpeed();
+      try { audioEl.defaultPlaybackRate = s; audioEl.playbackRate = s; } catch (e) {}
+    }
+    function updateSpeedLabel() {
+      var b = document.getElementById('speedBtn');
+      if (!b) return;
+      var s = getSpeed();
+      var label = (s === 1) ? '1' : String(s);
+      b.innerHTML = 'Speed ' + label + '×';
+      if (s !== 1) b.className = 'pill on'; else b.className = 'pill';
+    }
+
+    // ---- Sleep timer ----
+    var SLEEP_MINS = [0, 15, 30, 45, 60];
+    var sleepTimer = null;
+    var sleepEndsAt = 0;
+    var sleepTick = null;
+
+    function clearSleep() {
+      if (sleepTimer) { clearTimeout(sleepTimer); sleepTimer = null; }
+      if (sleepTick) { clearInterval(sleepTick); sleepTick = null; }
+      sleepEndsAt = 0;
+    }
+    function cycleSleep() {
+      var btn = document.getElementById('sleepBtn');
+      if (!btn) return;
+      // Figure out current selection from remaining minutes (0 if off).
+      var curMin = sleepEndsAt ? Math.ceil((sleepEndsAt - (new Date()).getTime()) / 60000) : 0;
+      var idx = 0;
+      for (var i = 0; i < SLEEP_MINS.length; i++) { if (SLEEP_MINS[i] === curMin) { idx = i; break; } }
+      var mins = SLEEP_MINS[(idx + 1) % SLEEP_MINS.length];
+      clearSleep();
+      if (mins === 0) {
+        btn.className = 'pill';
+        btn.innerHTML = '&#127769; Sleep';
+        return;
+      }
+      sleepEndsAt = (new Date()).getTime() + mins * 60000;
+      sleepTimer = setTimeout(function () {
+        if (audioEl) { try { audioEl.pause(); } catch (e) {} }
+        clearSleep();
+        var b = document.getElementById('sleepBtn');
+        if (b) { b.className = 'pill'; b.innerHTML = '&#127769; Sleep'; }
+      }, mins * 60000);
+      btn.className = 'pill on';
+      updateSleepLabel();
+      sleepTick = setInterval(updateSleepLabel, 30000);
+    }
+    function updateSleepLabel() {
+      var btn = document.getElementById('sleepBtn');
+      if (!btn || !sleepEndsAt) return;
+      var left = Math.max(0, Math.ceil((sleepEndsAt - (new Date()).getTime()) / 60000));
+      btn.innerHTML = '&#127769; ' + left + ' min';
     }
 
     function renderChapters() {
       var list = document.getElementById('chapterList');
       var html = '';
       for (var i = 0; i < current.chapters.length; i++) {
+        var done = isVlcDone(current.id, i);
         html += '<div class="chrow">'
               + '<button class="chapter' + (i === currentChapter ? ' active' : '')
               +   '" type="button" data-i="' + i + '">' + esc(current.chapters[i].name) + '</button>'
-              + '<button class="vlcbtn" type="button" data-dl="' + i + '" title="Download to VLC">'
-              +   '&#8681; VLC</button>'
+              + '<button class="vlcbtn' + (done ? ' done' : '') + '" type="button" data-dl="' + i + '" '
+              +   'title="Download to VLC">' + (done ? '&#10003; VLC' : '&#8681; VLC') + '</button>'
               + '</div>';
       }
       list.innerHTML = html;
@@ -604,6 +791,8 @@
       var ch = current.chapters[index];
       if (!ch) return;
       fireScheme(vlcDownloadUrl(ch.url, chapterFileName(ch)));
+      markVlc(current.id, index);
+      renderChapters();
       var hint = document.getElementById('vlcHint');
       if (hint) hint.style.display = 'block';
     }
@@ -618,9 +807,10 @@
         if (hint) hint.style.display = 'block';
         var i = 0;
         function next() {
-          if (i >= current.chapters.length) return;
+          if (i >= current.chapters.length) { renderChapters(); return; }
           var ch = current.chapters[i];
           fireScheme(vlcDownloadUrl(ch.url, chapterFileName(ch)));
+          markVlc(current.id, i);
           i++;
           setTimeout(next, 1200);
         }
@@ -642,7 +832,8 @@
         audioEl.addEventListener('loadedmetadata', seekOnce);
       }
       audioEl.load();
-      if (autoplay) { try { audioEl.play(); } catch (e) {} }
+      applySpeed();
+      if (autoplay) { wantPlaying = true; try { audioEl.play(); } catch (e) {} }
       renderChapters();
       updateNavButtons();
       updatePlayIcon();
@@ -656,6 +847,9 @@
     }
 
     backBtn.onclick = function () {
+      wantPlaying = false;
+      hideResume();
+      clearSleep();
       if (audioEl) { try { audioEl.pause(); } catch (e) {} }
       detailView.style.display = 'none';
       detailView.innerHTML = '';
@@ -664,7 +858,35 @@
       topbar.className = 'topbar';
       backBtn.style.display = 'none';
       topTitle.innerHTML = 'StorySprout';
+      renderContinue();
     };
+
+    // ---- Recover from iOS suspending audio (screen lock / app switch) ----
+    // iOS silently pauses HTML5 audio when Safari is backgrounded. When we come
+    // back, try to resume; if the browser blocks autoplay, show a tap-to-resume bar.
+    var resumeBar = document.getElementById('resumeBar');
+    function hideResume() { if (resumeBar) resumeBar.style.display = 'none'; }
+    function showResume() { if (resumeBar) resumeBar.style.display = 'block'; }
+    resumeBar.onclick = function () {
+      hideResume();
+      if (audioEl) { wantPlaying = true; try { audioEl.play(); } catch (e) {} }
+    };
+    function tryResume() {
+      if (!audioEl || !wantPlaying || !audioEl.paused) { hideResume(); return; }
+      try { audioEl.play(); } catch (e) {}
+      // If still paused a moment later, the browser blocked it: offer a tap.
+      setTimeout(function () {
+        if (audioEl && wantPlaying && audioEl.paused) showResume();
+        else hideResume();
+      }, 350);
+    }
+    if (typeof document.addEventListener === 'function') {
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) tryResume();
+      });
+    }
+    window.addEventListener('pageshow', tryResume);
+    window.addEventListener('focus', tryResume);
 
     loadLibrary();
   })();
