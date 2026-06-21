@@ -114,20 +114,48 @@
     .ctrl.play { width: 64px; height: 64px; background: #ff6b6b; color: #fff;
       border-color: #ff6b6b; font-size: 26px; }
     .ctrl[disabled] { opacity: 0.35; }
+    .chrow { display: block; margin-bottom: 8px; font-size: 0; }
     .chapter {
-      display: block;
-      width: 100%;
+      display: inline-block;
+      vertical-align: middle;
+      width: 78%;
       text-align: left;
       background: #fff;
       border: 1px solid #e2e8f0;
-      border-radius: 8px;
+      border-radius: 8px 0 0 8px;
+      border-right: 0;
       padding: 12px 14px;
-      margin-bottom: 8px;
       font-size: 16px;
       -webkit-appearance: none;
       color: #2d3436;
     }
     .chapter.active { background: #ff6b6b; color: #fff; border-color: #ff6b6b; }
+    .vlcbtn {
+      display: inline-block;
+      vertical-align: middle;
+      width: 22%;
+      text-align: center;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 0 8px 8px 0;
+      padding: 12px 4px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #e8590c;
+      -webkit-appearance: none;
+      height: 100%;
+    }
+    /* Offline / download-to-VLC banner */
+    .offline {
+      background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px;
+      padding: 10px 12px; margin: 4px 4px 14px; font-size: 13px; color: #7c4a12;
+    }
+    .offline .dlall {
+      display: block; width: 100%; margin-top: 8px; -webkit-appearance: none;
+      background: #e8590c; color: #fff; border: 0; border-radius: 8px;
+      padding: 11px; font-size: 15px; font-weight: bold;
+    }
+    .offline .hint { display: none; margin-top: 8px; color: #9a6a2c; }
     .spin { text-align: center; padding: 30px; color: #888; }
     .retry {
       background: #ff6b6b; color: #fff; border: 0; border-radius: 8px;
@@ -385,12 +413,18 @@
         +   '<button class="ctrl" id="fwdBtn15" type="button" title="Forward 15s">15&#8631;</button>'
         +   '<button class="ctrl small" id="nextBtn" type="button" title="Next chapter">&#9197;</button>'
         + '</div>'
+        + '<div class="offline">'
+        +   '📶 Listening offline? Download chapters into the VLC app to play them with no connection.'
+        +   '<button class="dlall" id="dlAllBtn" type="button">&#8681; Send whole book to VLC</button>'
+        +   '<div class="hint" id="vlcHint">If nothing happened, install the free <b>VLC</b> app from the App Store, then tap again.</div>'
+        + '</div>'
         + '<div id="chapterList"></div>';
       detailView.innerHTML = html;
 
       audioEl = document.getElementById('player');
       renderChapters();
       wireControls();
+      wireDownloads();
 
       audioEl.addEventListener('timeupdate', function () {
         updateSeek();
@@ -484,14 +518,75 @@
       var list = document.getElementById('chapterList');
       var html = '';
       for (var i = 0; i < current.chapters.length; i++) {
-        html += '<button class="chapter' + (i === currentChapter ? ' active' : '')
-              + '" type="button" data-i="' + i + '">' + esc(current.chapters[i].name) + '</button>';
+        html += '<div class="chrow">'
+              + '<button class="chapter' + (i === currentChapter ? ' active' : '')
+              +   '" type="button" data-i="' + i + '">' + esc(current.chapters[i].name) + '</button>'
+              + '<button class="vlcbtn" type="button" data-dl="' + i + '" title="Download to VLC">'
+              +   '&#8681; VLC</button>'
+              + '</div>';
       }
       list.innerHTML = html;
       var btns = list.getElementsByClassName('chapter');
       for (var b = 0; b < btns.length; b++) {
         btns[b].onclick = function () { playChapter(parseInt(this.getAttribute('data-i'), 10), true); };
       }
+      var dls = list.getElementsByClassName('vlcbtn');
+      for (var d = 0; d < dls.length; d++) {
+        dls[d].onclick = function () { sendToVlc(parseInt(this.getAttribute('data-dl'), 10)); };
+      }
+    }
+
+    // ---- Download to VLC (offline) ----
+    // VLC for iOS registers the vlc-x-callback scheme; its "download" action
+    // pulls a remote file into VLC's offline library.
+    function vlcDownloadUrl(mediaUrl, fileName) {
+      var u = 'vlc-x-callback://x-callback-url/download?url=' + encodeURIComponent(mediaUrl);
+      if (fileName) u += '&filename=' + encodeURIComponent(fileName);
+      return u;
+    }
+
+    function fireScheme(url) {
+      // Navigating an iframe to the scheme avoids leaving the page if VLC
+      // is absent; if installed, iOS hands off to it.
+      var f = document.createElement('iframe');
+      f.style.display = 'none';
+      f.src = url;
+      document.body.appendChild(f);
+      setTimeout(function () { try { document.body.removeChild(f); } catch (e) {} }, 1500);
+    }
+
+    function chapterFileName(ch) {
+      var name = ch.name || 'audio';
+      if (!/\.[a-z0-9]{2,4}$/i.test(name)) name += '.mp3';
+      return name;
+    }
+
+    function sendToVlc(index) {
+      var ch = current.chapters[index];
+      if (!ch) return;
+      fireScheme(vlcDownloadUrl(ch.url, chapterFileName(ch)));
+      var hint = document.getElementById('vlcHint');
+      if (hint) hint.style.display = 'block';
+    }
+
+    function wireDownloads() {
+      var dlAll = document.getElementById('dlAllBtn');
+      if (!dlAll) return;
+      dlAll.onclick = function () {
+        // Queue each chapter to VLC with a small stagger so the scheme
+        // hand-offs don't collide.
+        var hint = document.getElementById('vlcHint');
+        if (hint) hint.style.display = 'block';
+        var i = 0;
+        function next() {
+          if (i >= current.chapters.length) return;
+          var ch = current.chapters[i];
+          fireScheme(vlcDownloadUrl(ch.url, chapterFileName(ch)));
+          i++;
+          setTimeout(next, 1200);
+        }
+        next();
+      };
     }
 
     function playChapter(index, autoplay, resumeTime) {
