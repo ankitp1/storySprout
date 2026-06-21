@@ -89,8 +89,31 @@
     .detail .ph2 { line-height: 200px; }
     .detail h2 { text-align: center; margin: 8px 12px 0; }
     .detail .sub { text-align: center; color: #888; margin: 2px 0 10px; }
-    audio { width: 100%; margin: 8px 0 14px; }
+    /* Keep the native audio element around for playback but hide its
+       cramped built-in controls (old iOS only shows a tiny play button). */
+    audio { width: 1px; height: 1px; position: absolute; left: -9999px; }
     .nowplaying { font-weight: bold; padding: 4px 4px 10px; }
+
+    /* Custom control bar (works on iOS 9 WebKit) */
+    .seekrow { padding: 4px 4px 2px; }
+    .seek { width: 100%; -webkit-appearance: none; appearance: none; height: 6px;
+      border-radius: 4px; background: #dfe6e9; margin: 6px 0; }
+    .seek::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px;
+      border-radius: 50%; background: #ff6b6b; }
+    .times { font-size: 12px; color: #888; }
+    .times .cur { float: left; }
+    .times .dur { float: right; }
+    .times:after { content: ""; display: block; clear: both; }
+    .controls { text-align: center; padding: 8px 0 14px; }
+    .ctrl {
+      -webkit-appearance: none; background: #fff; border: 1px solid #e2e8f0;
+      border-radius: 50%; width: 52px; height: 52px; margin: 0 6px;
+      font-size: 20px; color: #2d3436; vertical-align: middle; padding: 0;
+    }
+    .ctrl.small { width: 44px; height: 44px; font-size: 14px; }
+    .ctrl.play { width: 64px; height: 64px; background: #ff6b6b; color: #fff;
+      border-color: #ff6b6b; font-size: 26px; }
+    .ctrl[disabled] { opacity: 0.35; }
     .chapter {
       display: block;
       width: 100%;
@@ -349,25 +372,112 @@
         + '<h2>' + esc(current.title) + '</h2>'
         + (current.series ? '<div class="sub">' + esc(current.series) + '</div>' : '')
         + '<div class="nowplaying" id="nowPlaying"></div>'
-        + '<audio id="player" controls preload="metadata"></audio>'
+        + '<audio id="player" preload="metadata"></audio>'
+        + '<div class="seekrow">'
+        +   '<input class="seek" id="seek" type="range" min="0" max="1000" value="0" step="1">'
+        +   '<div class="times"><span class="cur" id="curTime">0:00</span>'
+        +     '<span class="dur" id="durTime">0:00</span></div>'
+        + '</div>'
+        + '<div class="controls">'
+        +   '<button class="ctrl small" id="prevBtn" type="button" title="Previous chapter">&#9198;</button>'
+        +   '<button class="ctrl" id="backBtn15" type="button" title="Back 15s">&#8630;15</button>'
+        +   '<button class="ctrl play" id="playBtn" type="button">&#9658;</button>'
+        +   '<button class="ctrl" id="fwdBtn15" type="button" title="Forward 15s">15&#8631;</button>'
+        +   '<button class="ctrl small" id="nextBtn" type="button" title="Next chapter">&#9197;</button>'
+        + '</div>'
         + '<div id="chapterList"></div>';
       detailView.innerHTML = html;
 
       audioEl = document.getElementById('player');
       renderChapters();
+      wireControls();
 
       audioEl.addEventListener('timeupdate', function () {
+        updateSeek();
         var now = (new Date()).getTime();
         if (now - lastSaved > 3000) {
           lastSaved = now;
           saveProgress(current.id, currentChapter, audioEl.currentTime);
         }
       });
+      audioEl.addEventListener('loadedmetadata', updateSeek);
+      audioEl.addEventListener('durationchange', updateSeek);
+      audioEl.addEventListener('play', updatePlayIcon);
+      audioEl.addEventListener('pause', updatePlayIcon);
       audioEl.addEventListener('ended', function () {
         if (currentChapter < current.chapters.length - 1) playChapter(currentChapter + 1, true);
+        else updatePlayIcon();
       });
 
       playChapter(currentChapter, false, resumeTime);
+    }
+
+    function fmtTime(s) {
+      if (!s || s < 0 || isNaN(s) || s === Infinity) return '0:00';
+      s = Math.floor(s);
+      var m = Math.floor(s / 60), sec = s % 60;
+      return m + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+
+    var seeking = false;
+
+    function updateSeek() {
+      if (seeking || !audioEl) return;
+      var seek = document.getElementById('seek');
+      var cur = document.getElementById('curTime');
+      var dur = document.getElementById('durTime');
+      if (!seek) return;
+      var d = audioEl.duration;
+      if (d && d !== Infinity && !isNaN(d)) {
+        seek.value = Math.round((audioEl.currentTime / d) * 1000);
+        if (dur) dur.innerHTML = fmtTime(d);
+      }
+      if (cur) cur.innerHTML = fmtTime(audioEl.currentTime);
+    }
+
+    function updatePlayIcon() {
+      var btn = document.getElementById('playBtn');
+      if (!btn || !audioEl) return;
+      btn.innerHTML = audioEl.paused ? '&#9658;' : '&#10073;&#10073;';
+    }
+
+    function updateNavButtons() {
+      var prev = document.getElementById('prevBtn');
+      var next = document.getElementById('nextBtn');
+      if (prev) prev.disabled = (currentChapter <= 0);
+      if (next) next.disabled = (currentChapter >= current.chapters.length - 1);
+    }
+
+    function wireControls() {
+      var seek = document.getElementById('seek');
+      document.getElementById('playBtn').onclick = function () {
+        if (!audioEl) return;
+        if (audioEl.paused) { try { audioEl.play(); } catch (e) {} }
+        else audioEl.pause();
+      };
+      document.getElementById('backBtn15').onclick = function () {
+        if (audioEl) audioEl.currentTime = Math.max(0, audioEl.currentTime - 15);
+      };
+      document.getElementById('fwdBtn15').onclick = function () {
+        if (audioEl && audioEl.duration) audioEl.currentTime = Math.min(audioEl.duration, audioEl.currentTime + 15);
+      };
+      document.getElementById('prevBtn').onclick = function () {
+        if (currentChapter > 0) playChapter(currentChapter - 1, true);
+      };
+      document.getElementById('nextBtn').onclick = function () {
+        if (currentChapter < current.chapters.length - 1) playChapter(currentChapter + 1, true);
+      };
+      seek.addEventListener('touchstart', function () { seeking = true; });
+      seek.addEventListener('mousedown', function () { seeking = true; });
+      function commitSeek() {
+        if (audioEl && audioEl.duration && audioEl.duration !== Infinity) {
+          audioEl.currentTime = (seek.value / 1000) * audioEl.duration;
+        }
+        seeking = false;
+      }
+      seek.addEventListener('change', commitSeek);
+      seek.addEventListener('touchend', commitSeek);
+      seek.addEventListener('mouseup', commitSeek);
     }
 
     function renderChapters() {
@@ -400,6 +510,14 @@
       audioEl.load();
       if (autoplay) { try { audioEl.play(); } catch (e) {} }
       renderChapters();
+      updateNavButtons();
+      updatePlayIcon();
+      var cur = document.getElementById('curTime');
+      var dur = document.getElementById('durTime');
+      if (cur) cur.innerHTML = '0:00';
+      if (dur) dur.innerHTML = '0:00';
+      var seek = document.getElementById('seek');
+      if (seek) seek.value = 0;
       saveProgress(current.id, currentChapter, resumeTime || 0);
     }
 
